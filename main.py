@@ -74,7 +74,11 @@ async def on_message(message):
             "`-msglb`: sends the message leaderboard\n`-edit [user_id] [message_number]`: update a user's message number\n`-delete [user_id]`: delete a user from the leaderboard\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n`-minfo`: shows the current minimum value to appear on the leaderboard"
         )
 
-    # command to show the current value of minimum
+    # command to print the source link
+    if message.content.startswith("-source"):
+        await message.channel.send("https://github.com/RafaeI11/Message_LeaderBot")
+
+    # command to print the current value of minimum
     if message.content.startswith("-minfo"):
         await message.channel.send(
             f"The current minimum is {minimum['value']} messages"
