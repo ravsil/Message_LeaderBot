@@ -14,8 +14,8 @@ except:
 
 def update_json():
     msg_json = json.dumps(msg_dic, indent=1)
-    with open("messages.json", "w") as c:
-        c.write(msg_json)
+    with open("messages.json", "w") as b:
+        b.write(msg_json)
 
 
 @client.event
@@ -26,9 +26,13 @@ async def on_message(message):
     # adds a point to the author everytime a message is sent
     if message.content.startswith(""):
         if str(message.author.id) not in msg_dic:
-            msg_dic[str(message.author.id)] = 1
+            msg_dic[str(message.author.id)] = {
+                "messages": 1,
+                "alt": None,
+                "is_alt": False,
+            }
         else:
-            msg_dic[str(message.author.id)] += 1
+            msg_dic[str(message.author.id)]["messages"] += 1
 
     if message.author.guild_permissions.manage_channels:
         # command to add/update new entries to the leaderboard
@@ -43,14 +47,56 @@ async def on_message(message):
                 if not edit_content[1].isdigit() or not edit_content[2].isdigit():
                     await message.channel.send("Error: invalid id/number")
                 else:
-                    msg_dic[edit_content[1]] = int(edit_content[2])
+                    msg_dic[edit_content[1]] = {
+                        "messages": int(edit_content[2]),
+                        "alt": None,
+                        "is_alt": False,
+                    }
                     update_json()
                     await message.channel.send(
                         f"{user_name[0]} was saved with {edit_content[2]} messages"
                     )
             except:
                 await message.channel.send(
-                    "Error: you must input an id and a number of messages"
+                    "Error: you must input an valid id and a number of messages"
+                )
+        # command to save an user as someone else's alt
+        if message.content.startswith("-alt"):
+            main, alt = message.content.split()[1:]
+
+            if main == alt:
+                await message.channel.send(f"{main} can't be an alt of itself")
+            elif main not in msg_dic:
+                await message.channel.send(f"Error: {main} not found")
+            elif alt not in msg_dic:
+                await message.channel.send(f"Error: {alt} not found")
+            elif msg_dic[alt]["is_alt"]:
+                await message.channel.send(
+                    f"Error: {await client.fetch_user(alt)} ({alt}) is already an alt"
+                )
+            else:
+                msg_dic[main]["alt"] = alt
+                msg_dic[alt]["is_alt"] = True
+                update_json()
+                await message.channel.send(
+                    f"{await client.fetch_user(alt)} was saved as an alt of {await client.fetch_user(main)}"
+                )
+                
+        if message.content.startswith("-removealt"):
+            main, alt = message.content.split()[1:]
+
+            if main == alt:
+                await message.channel.send(f"{main} can't be an alt of itself")
+            elif main not in msg_dic:
+                await message.channel.send(f"error: {main} not found")
+            elif alt not in msg_dic:
+                await message.channel.send(f"error: {alt} not found")
+            else:
+                msg_dic[main]["alt"] = None
+                msg_dic[alt]["is_alt"] = False
+                update_json()
+                await message.channel.send(
+                    f"{await client.fetch_user(alt)} is no longer an alt of {await client.fetch_user(main)}"
                 )
 
         # command to delete entries from the leaderboard
@@ -81,7 +127,7 @@ async def on_message(message):
     # help command
     if message.content.startswith("-help"):
         await message.channel.send(
-            "`-msglb`: prints the message leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-source`: prints the source code link"
+            "`-msglb`: prints the message leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`alt [user_id] [alt_id]`: adds up the alt's messages to the user's messages (1 alt per user)\n\n`removealt [user_id] [alt_id]`: removes alt from user\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-source`: prints the source code link"
         )
 
     # command to print the source link
@@ -97,10 +143,21 @@ async def on_message(message):
     # command to print the message leaderboard
     if message.content.startswith("-msglb"):
         update_json()
+        simple_msg_dic = {}
         msg_lb = ""
+        
+        for id in msg_dic:
+            if msg_dic[id]["alt"] is None and msg_dic[id]["is_alt"] == False:
+                simple_msg_dic[id] = msg_dic[id]["messages"]
+
+            if msg_dic[id]["alt"] is not None and msg_dic[id]["is_alt"] == False:
+                simple_msg_dic[id] = (
+                    msg_dic[id]["messages"] + msg_dic[msg_dic[id]["alt"]]["messages"]
+                )
+
         # sorts the leaderboard by most messages in probably the ugliest way possible
         almost_sorted_msg_dic = sorted(
-            msg_dic.items(), key=lambda x: x[1], reverse=True
+            simple_msg_dic.items(), key=lambda x: x[1], reverse=True
         )
         sorted_msg_dic = {}
 
@@ -115,7 +172,7 @@ async def on_message(message):
                     user_name = str(user_name).split("#")
                 except:
                     user_name = "Invalid User"
-                msg_lb += f"{msg_dic[user]}: {user_name[0]}\n"
+                msg_lb += f"{simple_msg_dic[user]}: {user_name[0]}\n"
 
         embed = discord.Embed(
             title="Message Leaderboard", color=7419530, description=msg_lb
