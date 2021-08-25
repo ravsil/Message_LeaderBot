@@ -34,8 +34,11 @@ async def on_message(message):
         # command to add/update new entries to the leaderboard
         if message.content.startswith("-edit"):
             edit_content = message.content.split()
-            user_name = await client.fetch_user(edit_content[1])
-            user_name = str(user_name).split("#")
+            try:
+                user_name = await client.fetch_user(edit_content[1])
+                user_name = str(user_name).split("#")
+            except:
+                user_name = "Invalid User"
             try:
                 if not edit_content[1].isdigit() or not edit_content[2].isdigit():
                     await message.channel.send("Error: invalid id/number")
@@ -53,8 +56,11 @@ async def on_message(message):
         # command to delete entries from the leaderboard
         if message.content.startswith("-delete"):
             del_content = message.content.split()
-            user_name = await client.fetch_user(del_content[1])
-            user_name = str(user_name).split("#")
+            try:
+                user_name = await client.fetch_user(edit_content[1])
+                user_name = str(user_name).split("#")
+            except:
+                user_name = "Invalid User"
             try:
                 msg_dic.pop(del_content[1])
                 update_json()
@@ -104,8 +110,11 @@ async def on_message(message):
         # restricts the leaderboard to only users with more than 20k messages
         for user in sorted_msg_dic:
             if int(sorted_msg_dic[user]) >= minimum["value"]:
-                user_name = await client.fetch_user(user)
-                user_name = str(user_name).split("#")
+                try:
+                    user_name = await client.fetch_user(edit_content[1])
+                    user_name = str(user_name).split("#")
+                except:
+                    user_name = "Invalid User"
                 msg_lb += f"{msg_dic[user]}: {user_name[0]}\n"
 
         embed = discord.Embed(
