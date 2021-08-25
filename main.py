@@ -71,7 +71,7 @@ async def on_message(message):
     # help command
     if message.content.startswith("-help"):
         await message.channel.send(
-            "`-msglb`: sends the message leaderboard\n`-edit [user_id] [message_number]`: update a user's message number\n`-delete [user_id]`: delete a user from the leaderboard\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n`-minfo`: shows the current minimum value to appear on the leaderboard"
+            "`-msglb`: prints the message leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-source`: prints the source code link"
         )
 
     # command to print the source link
