@@ -171,7 +171,7 @@ async def on_message(message):
                 pass
             elif int(sorted_msg_dic[user]) >= minimum["value"]:
                 try:
-                    user_name = await client.fetch_user(edit_content[1])
+                    user_name = await client.fetch_user(user)
                     user_name = str(user_name).split("#")
                 except:
                     user_name = "Invalid User"
