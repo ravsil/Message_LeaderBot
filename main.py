@@ -166,14 +166,20 @@ async def on_message(message):
 
         # restricts the leaderboard to only users with more than 20k messages
         for user in sorted_msg_dic:
-            if int(sorted_msg_dic[user]) >= minimum["value"]:
+            # prevents Steve from being on the top
+            if user == "657571924527808512":
+                pass
+            elif int(sorted_msg_dic[user]) >= minimum["value"]:
                 try:
                     user_name = await client.fetch_user(edit_content[1])
                     user_name = str(user_name).split("#")
                 except:
                     user_name = "Invalid User"
                 msg_lb += f"{simple_msg_dic[user]}: {user_name[0]}\n"
-
+        
+        # adds steve to the end
+        msg_lb += f"\n {simple_msg_dic['657571924527808512']}: Steve the bot"
+        
         embed = discord.Embed(
             title="Message Leaderboard", color=7419530, description=msg_lb
         )
