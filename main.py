@@ -204,4 +204,4 @@ async def on_message(message):
 
 @client.event
 async def on_message_delete(message):
-    msg_dic[str(message.author.id)] -= 1
+    msg_dic[str(message.author.id)]["messages"] -= 1
