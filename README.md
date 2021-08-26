@@ -16,6 +16,8 @@ Discord bot to track how many messages a user has in a server.
 
 **Global Commands:**
 
+`-name`: updates author's name on the leadeboard
+
 `-minfo`: prints the current minimum value to appear on the leaderboard
 
 `-source`: prints the source code link"
