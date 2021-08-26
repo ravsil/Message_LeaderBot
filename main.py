@@ -26,8 +26,10 @@ async def on_message(message):
     # adds a point to the author everytime a message is sent
     if message.content.startswith(""):
         if str(message.author.id) not in msg_dic:
+            name = str(message.author).split("#")
             msg_dic[str(message.author.id)] = {
                 "messages": 1,
+                "name": name[0],
                 "alt": None,
                 "is_alt": False,
             }
@@ -42,13 +44,14 @@ async def on_message(message):
                 user_name = await client.fetch_user(edit_content[1])
                 user_name = str(user_name).split("#")
             except:
-                user_name = "Invalid User"
+                user_name = ["Invalid User", ""]
             try:
                 if not edit_content[1].isdigit() or not edit_content[2].isdigit():
                     await message.channel.send("Error: invalid id/number")
                 else:
                     msg_dic[edit_content[1]] = {
                         "messages": int(edit_content[2]),
+                        "name": user_name[0],
                         "alt": None,
                         "is_alt": False,
                     }
@@ -72,14 +75,14 @@ async def on_message(message):
                 await message.channel.send(f"Error: {alt} not found")
             elif msg_dic[alt]["is_alt"]:
                 await message.channel.send(
-                    f"Error: {await client.fetch_user(alt)} ({alt}) is already an alt"
+                    f"Error: {msg_dic[alt]['name']} ({alt}) is already an alt"
                 )
             else:
                 msg_dic[main]["alt"] = alt
                 msg_dic[alt]["is_alt"] = True
                 update_json()
                 await message.channel.send(
-                    f"{await client.fetch_user(alt)} was saved as an alt of {await client.fetch_user(main)}"
+                    f"{msg_dic[alt]['name']} was saved as an alt of {msg_dic[main]['name']}"
                 )
                 
         if message.content.startswith("-removealt"):
@@ -96,21 +99,19 @@ async def on_message(message):
                 msg_dic[alt]["is_alt"] = False
                 update_json()
                 await message.channel.send(
-                    f"{await client.fetch_user(alt)} is no longer an alt of {await client.fetch_user(main)}"
+                    f"{msg_dic[alt]['name']} is no longer an alt of {msg_dic[main]['name']}"
                 )
 
         # command to delete entries from the leaderboard
         if message.content.startswith("-delete"):
             del_content = message.content.split()
+            
             try:
-                user_name = await client.fetch_user(edit_content[1])
-                user_name = str(user_name).split("#")
-            except:
-                user_name = "Invalid User"
-            try:
+                await message.channel.send(
+                    f"{msg_dic[del_content[1]]['name']} was deleted"
+                )
                 msg_dic.pop(del_content[1])
                 update_json()
-                await message.channel.send(f"{user_name[0]} was deleted")
             except:
                 await message.channel.send("Error: invalid id")
 
@@ -170,12 +171,7 @@ async def on_message(message):
             if user == "657571924527808512":
                 pass
             elif int(sorted_msg_dic[user]) >= minimum["value"]:
-                try:
-                    user_name = await client.fetch_user(user)
-                    user_name = str(user_name).split("#")
-                except:
-                    user_name = "Invalid User"
-                msg_lb += f"{simple_msg_dic[user]}: {user_name[0]}\n"
+                msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
         
         # adds steve to the end
         if '657571924527808512' in simple_msg_dic:
