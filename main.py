@@ -141,6 +141,18 @@ async def on_message(message):
             f"The current minimum is {minimum['value']} messages"
         )
 
+    # command to update a user's name
+    if message.content.startswith("-name"):
+        if message.author.id not in msg_dic:
+            pass
+        else:
+            name = str(message.author).split("#")
+                if name[0] == msg_dic[author.id]["name"]:
+                    await message.channel.send("Your name is already updated")
+                else:
+                    msg_dic[author.id]["name"] = name[0]
+                    await message.channel.send(f"Name updated to {name[0]}")
+
     # command to print the message leaderboard
     if message.content.startswith("-msglb"):
         update_json()
