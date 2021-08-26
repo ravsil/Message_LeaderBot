@@ -70,9 +70,9 @@ async def on_message(message):
             if main == alt:
                 await message.channel.send(f"{main} can't be an alt of itself")
             elif main not in msg_dic:
-                await message.channel.send(f"Error: {main} not found")
+                await message.channel.send(f"Error: {main} not found, try doing `-edit {main} [message_number]` first")
             elif alt not in msg_dic:
-                await message.channel.send(f"Error: {alt} not found")
+                await message.channel.send(f"Error: {alt} not found, try doing `-edit {alt} [message_number]` first")
             elif msg_dic[alt]["is_alt"]:
                 await message.channel.send(
                     f"Error: {msg_dic[alt]['name']} ({alt}) is already an alt"
@@ -91,9 +91,13 @@ async def on_message(message):
             if main == alt:
                 await message.channel.send(f"{main} can't be an alt of itself")
             elif main not in msg_dic:
-                await message.channel.send(f"error: {main} not found")
+                await message.channel.send(f"Error: {main} not found")
             elif alt not in msg_dic:
-                await message.channel.send(f"error: {alt} not found")
+                await message.channel.send(f"Error: {alt} not found")
+            elif msg_dic[main]["alt"] is None:
+                await message.channel.send(f"Error: {main} has no alts")
+            elif msg_dic[alt]["is_alt"] == False:
+                await message.channel.send(f"Error: {alt} is not an alt")
             else:
                 msg_dic[main]["alt"] = None
                 msg_dic[alt]["is_alt"] = False
@@ -128,7 +132,7 @@ async def on_message(message):
     # help command
     if message.content.startswith("-help"):
         await message.channel.send(
-            "`-msglb`: prints the message leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`-alt [user_id] [alt_id]`: adds up the alt's messages to the user's messages (1 alt per user)\n\n`-removealt [user_id] [alt_id]`: removes alt from user\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-source`: prints the source code link"
+            "`-msglb`: prints the message leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`-alt [user_id] [alt_id]`: adds up the alt's messages to the user's messages (1 alt per user)\n\n`-removealt [user_id] [alt_id]`: removes alt from user\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-name`: updates author's name on the leadeboard\n\n`-source`: prints the source code link"
         )
 
     # command to print the source link
@@ -183,7 +187,10 @@ async def on_message(message):
             if user == "657571924527808512":
                 pass
             elif int(sorted_msg_dic[user]) >= minimum["value"]:
-                msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
+                if msg_dic[user]["alt"] is not None:
+                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
+                else:
+                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
         
         # adds steve to the end
         if '657571924527808512' in simple_msg_dic:
