@@ -178,7 +178,8 @@ async def on_message(message):
                 msg_lb += f"{simple_msg_dic[user]}: {user_name[0]}\n"
         
         # adds steve to the end
-        msg_lb += f"\n {simple_msg_dic['657571924527808512']}: Steve the bot"
+        if '657571924527808512' in simple_msg_dic:
+            msg_lb += f"\n {simple_msg_dic['657571924527808512']}: Steve the bot"
         
         embed = discord.Embed(
             title="Message Leaderboard", color=7419530, description=msg_lb
