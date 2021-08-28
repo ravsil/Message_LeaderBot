@@ -3,7 +3,9 @@ import discord
 import json
 
 client = discord.Client()
-minimum = {"value": 20000}  # no idea why this is a dictionary but to lazy to change
+# temporary stuff, i'll change later
+minimum = {"value": 20000}  
+listen_to_all = {"value": True}
 
 try:
     with open("messages.json", "r") as a:
@@ -25,7 +27,7 @@ async def on_message(message):
 
     # adds a point to the author everytime a message is sent
     if message.content.startswith(""):
-        if str(message.author.id) not in msg_dic:
+        if str(message.author.id) not in msg_dic and listen_to_all["value"] is True:
             name = str(message.author).split("#")
             msg_dic[str(message.author.id)] = {
                 "messages": 1,
@@ -33,10 +35,20 @@ async def on_message(message):
                 "alt": None,
                 "is_alt": False,
             }
-        else:
+        elif str(message.author.id) in msg_dic:
             msg_dic[str(message.author.id)]["messages"] += 1
 
     if message.author.guild_permissions.manage_channels:
+        # command to turn on/off automatic addition of new users to the leaderboard
+        if message.content.startswith("-autoupdate"):
+            if listen_to_all["value"] == True:
+                listen_to_all["value"] = False
+                await message.channel.send("New users will **not** get added to the leaderboard anymore")
+            elif listen_to_all["value"] == False:
+                listen_to_all["value"] = True
+                await message.channel.send("New users **will** get added to the leaderboard")
+        
+        
         # command to add/update new entries to the leaderboard
         if message.content.startswith("-edit"):
             edit_content = message.content.split()
@@ -132,7 +144,7 @@ async def on_message(message):
     # help command
     if message.content.startswith("-help"):
         await message.channel.send(
-            "`-msglb`: prints the message leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`-alt [user_id] [alt_id]`: adds up the alt's messages to the user's messages (1 alt per user)\n\n`-removealt [user_id] [alt_id]`: removes alt from user\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-name`: updates author's name on the leadeboard\n\n`-source`: prints the source code link"
+            "`-msglb`: prints the message leaderboard\n\n`-autoupdate`: turns on/off automatic addition of new users to the leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`-alt [user_id] [alt_id]`: adds up the alt's messages to the user's messages (1 alt per user)\n\n`-removealt [user_id] [alt_id]`: removes alt from user\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-name`: updates author's name on the leadeboard\n\n`-source`: prints the source code link"
         )
 
     # command to print the source link
