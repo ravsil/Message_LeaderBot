@@ -187,6 +187,36 @@ async def removealt(ctx, user: discord.User, alt: discord.User):
 
 @bot.command()
 @commands.has_guild_permissions(manage_channels=True)
+async def addbot(ctx, user: discord.User):
+    """saves a user as a bot (displayed on the bottom of the leaderboard)"""
+    if bot.msg_dic[str(user.id)]["is_bot"]:
+        await ctx.send(f"{user} is already a bot")
+
+    try:
+        bot.msg_dic[str(user.id)]["is_bot"] = True
+        update_json()
+        await ctx.send(f"{user} is now a bot")
+    except KeyError:
+        await ctx.send(f"Error: {user} is not listed in the leaderboard")
+
+
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
+async def rmvbot(ctx, user: discord.User):
+    """removes bot tag form a user"""
+    if not bot.msg_dic[str(user.id)]["is_bot"]:
+        await ctx.send(f"{user} is already not a bot")
+
+    try:
+        bot.msg_dic[str(user.id)]["is_bot"] = False
+        update_json()
+        await ctx.send(f"{user} is no longer a bot")
+    except KeyError:
+        await ctx.send(f"Error: {user} is not listed in the leaderboard")
+
+
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
 async def delete(ctx, user: discord.User):
     """delete a user from the leaderboard"""
     try:
