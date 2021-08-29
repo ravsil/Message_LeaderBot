@@ -119,12 +119,12 @@ async def alt(ctx, user: discord.User, alt: discord.User):
 
     elif str(user.id) not in bot.msg_dic:
         return await ctx.send(
-            f"Error: {user} not found, try doing `-edit {user.id} [message_number]` first"
+            f"Error: {user} not found, try doing `-edit {user.id} <message_number>` first"
         )
 
     elif str(alt.id) not in bot.msg_dic:
         return await ctx.send(
-            f"Error: {alt} not found, try doing `-edit {alt.id} [message_number]` first"
+            f"Error: {alt} not found, try doing `-edit {alt.id} <message_number>` first"
         )
 
     elif bot.msg_dic[str(alt.id)]["is_alt"]:
