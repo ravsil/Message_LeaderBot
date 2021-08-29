@@ -299,7 +299,20 @@ async def on_command_error(ctx, error: commands.CommandError, *, bypass_check: b
     if isinstance(error, commands.MissingRequiredArgument):
         return await ctx.send(f"Error: you must input a valid `{error.param.name}`")
 
+    if isinstance(error, commands.MissingPermissions):
+        # probably i made it too over-complicated,
+        # but its so that the message stays consistent with the other error messages
+        error = str(error)
+        return await ctx.send(f"Error: {error[0].lower()}{error[1:-1]}")
+
     raise error
+
+
+@bot.event
+async def on_ready():
+    # launch everytime bot is online (not only first boot)
+    # just a way to know if the bot is online
+    print("Bot online!")
 
 
 if __name__ == "__main__":
