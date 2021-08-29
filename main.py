@@ -64,11 +64,9 @@ settings = "settings.json"
 
 try:
     with open("messages.json", "r") as b:
-        bot.msg_dic = json.loads(a.read())
-except BaseException:
+        bot.msg_dic = json.loads(b.read())
+except FileNotFoundError:
     bot.msg_dic = {}
-    with open("messages.json", "w+") as b:
-        b.write(json.dumps({}, indent=4))
 
 
 def update_settings():
@@ -109,13 +107,16 @@ async def autoupdate(ctx):
 async def edit(ctx, user: discord.User, message_number: int):
     """update a user's message number"""
     name = user.name
-
-    bot.msg_dic[user.id] = {
-        "messages": message_number,
-        "name": name,
-        "alt": None,
-        "is_alt": False,
-    }
+    if str(user.id) not in bot.msg_dic:
+        bot.msg_dic[str(user.id)] = {
+            "messages": message_number,
+            "name": name,
+            "alt": None,
+            "is_alt": False,
+            "is_bot": False,
+        }
+    else:
+        bot.msg_dic[str(user.id)]["messages"] = message_number
     update_json()
     await ctx.send(f"{name} was saved with {message_number} messages")
 
@@ -256,6 +257,7 @@ async def msglb(ctx):
     update_json()
     simple_msg_dic = {}
     msg_lb = ""
+    bots_lb = ""
     msg_dic = bot.msg_dic
 
     for id in msg_dic:
@@ -280,18 +282,17 @@ async def msglb(ctx):
 
     # restricts the leaderboard to only users with more than a certain minimum
     for user in sorted_msg_dic:
-        # prevents Steve from being on the top
-        if user == "657571924527808512":
-            pass
+        # prevents bots from being on the top
+        if msg_dic[user]["is_bot"]:
+            bots_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
         elif int(sorted_msg_dic[user]) >= bot.settings["minimum"]:
             if msg_dic[user]["alt"] is not None:
                 msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
             else:
                 msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
 
-    # adds steve to the end
-    if "657571924527808512" in simple_msg_dic:
-        msg_lb += f"\n {simple_msg_dic['657571924527808512']}: Steve the bot"
+    # adds bots to the end
+    msg_lb += "\n" + bots_lb
 
     embed = discord.Embed(
         title="Message Leaderboard", color=7419530, description=msg_lb
@@ -306,12 +307,22 @@ async def on_message(message):
 
     # adds a point to the author everytime a message is sent
     if str(message.author.id) not in bot.msg_dic and bot.settings["listen_to_all"]:
-        bot.msg_dic[str(message.author.id)] = {
-            "messages": 1,
-            "name": message.author.name,
-            "alt": None,
-            "is_alt": False,
-        }
+        if message.author.bot:
+            bot.msg_dic[str(message.author.id)] = {
+                "messages": 1,
+                "name": message.author.name,
+                "alt": None,
+                "is_alt": False,
+                "is_bot": True,
+            }
+        else:
+            bot.msg_dic[str(message.author.id)] = {
+                "messages": 1,
+                "name": message.author.name,
+                "alt": None,
+                "is_alt": False,
+                "is_bot": False,
+            }
 
     elif str(message.author.id) in bot.msg_dic:
         bot.msg_dic[str(message.author.id)]["messages"] += 1
