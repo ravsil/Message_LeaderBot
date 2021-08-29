@@ -1,8 +1,12 @@
 # Message LeaderBot
 Discord bot to track how many messages a user has in a server.
 
+## Setup
+With python 3.9 (or newer) installed, download/copy and execute [main.py](https://github.com/RafaeI11/Message_LeaderBot/blob/main/main.py). A token will be requested, which you can get from your bot profile. After that the bot will be running
+
 ## Command List
-**Mod Commands:**
+
+### Mod Commands:
 
 `-autoupdate` : turns on/off automatic addition of new users to the leaderboard
 
@@ -20,7 +24,7 @@ Discord bot to track how many messages a user has in a server.
 
 `-minimum <value>`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)
 
-**Global Commands:**
+### Global Commands:
 
 `-name`: updates author's name on the leadeboard
 
@@ -31,3 +35,7 @@ Discord bot to track how many messages a user has in a server.
 `-msglb`: prints the message leaderboard
 
 `-help`: prints help message
+
+#
+
+##### NOTE: currently only works properly in one server at a time
