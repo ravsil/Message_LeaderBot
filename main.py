@@ -312,11 +312,11 @@ async def msglb(ctx):
 
     # restricts the leaderboard to only users with more than a certain minimum
     for user in sorted_msg_dic:
-        # prevents bots from being on the top
-        if msg_dic[user]["is_bot"]:
-            bots_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
-        elif int(sorted_msg_dic[user]) >= bot.settings["minimum"]:
-            if msg_dic[user]["alt"] is not None:
+        if int(sorted_msg_dic[user]) >= bot.settings["minimum"]:
+            # prevents bots from being on the top
+            if msg_dic[user]["is_bot"]:
+                bots_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
+            elif msg_dic[user]["alt"] is not None:
                 msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
             else:
                 msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
@@ -380,7 +380,7 @@ async def on_command_error(
     error = getattr(error, "original", error)
 
     if isinstance(error, commands.CommandNotFound):
-        # command not found is annoying for most bot user, so just return nothing
+        # command not found is annoying for most bot users, so just return nothing
         return
 
     if isinstance(error, commands.UserNotFound):
