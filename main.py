@@ -1,9 +1,8 @@
+import discord
+from discord.ext import commands, tasks
 import json
 import os
 import uuid
-
-import discord
-from discord.ext import commands, tasks
 
 
 class HelpCmd(commands.HelpCommand):
@@ -66,9 +65,9 @@ except BaseException:
 
 
 def update_json():
-    temp = "{}-{}.tmp".format(uuid.uuid4(), filename)
-    with open(temp, "w") as tmp:
-        json.dump(bot.msg_dic.copy(), tmp, indent=4)
+    temp = f"{uuid.uuid4()}-{filename}.tmp"
+    with open(temp, "w") as b:
+        json.dump(bot.msg_dic.copy(), b, indent=4)
 
     os.replace(temp, filename)
 
@@ -77,11 +76,10 @@ def update_json():
 @commands.has_guild_permissions(manage_channels=True)
 async def autoupdate(ctx):
     """turns on/off automatic addition of new users to the leaderboard"""
-    # command to turn on/off automatic addition of new users to the leaderboard
     if bot.listen_to_all:
         bot.listen_to_all = False
         return await ctx.send(
-            "New users will **not** get added to the leaderboard anymore"
+            "New users **will not** get added to the leaderboard anymore"
         )
 
     bot.listen_to_all = True
@@ -116,31 +114,30 @@ async def edit_err(ctx, error):
 @commands.has_guild_permissions(manage_channels=True)
 async def alt(ctx, user: discord.User, alt: discord.User):
     """adds up the alt's messages to the user's messages (1 alt per user)"""
-    # command to save an user as someone else's alt
     if user == alt:
         return await ctx.send(f"{user} can't be an alt of itself")
 
-    if str(user.id) not in bot.msg_dic:
+    elif str(user.id) not in bot.msg_dic:
         return await ctx.send(
             f"Error: {user} not found, try doing `-edit {user.id} [message_number]` first"
         )
 
-    if str(alt.id) not in bot.msg_dic:
+    elif str(alt.id) not in bot.msg_dic:
         return await ctx.send(
             f"Error: {alt} not found, try doing `-edit {alt.id} [message_number]` first"
         )
 
-    if bot.msg_dic[str(alt.id)]["is_alt"]:
+    elif bot.msg_dic[str(alt.id)]["is_alt"]:
         return await ctx.send(
-            f"Error: {bot.msg_dic[str(alt.id)]['name']} ({alt.name}) is already an alt"
+            f"Error: {alt.name} ({alt.id}) is already an alt"
         )
 
-    bot.msg_dic[user.id]["alt"] = alt
-    bot.msg_dic[alt.id]["is_alt"] = True
+    else:
+        bot.msg_dic[str(user.id)]["alt"] = str(alt.id)
+        bot.msg_dic[str(alt.id)]["is_alt"] = True
+        update_json()
 
-    update_json()
-
-    await ctx.send(f"{alt.name} was saved as an alt of {user.name}")
+        await ctx.send(f"{alt} was saved as an alt of {user}")
 
 
 @bot.command()
@@ -151,37 +148,36 @@ async def removealt(ctx, user: discord.User, alt: discord.User):
     if user == alt:
         return await ctx.send(f"{user} can't be an alt of itself")
 
-    if str(user.id) not in bot.msg_dic:
+    elif str(user.id) not in bot.msg_dic:
         return await ctx.send(f"Error: {user} not found")
 
-    if str(alt.id) not in bot.msg_dic:
+    elif str(alt.id) not in bot.msg_dic:
         return await ctx.send(f"Error: {alt} not found")
 
-    if not bot.msg_dic[str(user.id)]["alt"]:
+    elif not bot.msg_dic[str(user.id)]["alt"]:
         return await ctx.send(f"Error: {user} has no alts")
 
-    if not bot.msg_dic[str(alt.id)]["is_alt"]:
+    elif not bot.msg_dic[str(alt.id)]["is_alt"]:
         return await ctx.send(f"Error: {alt} is not an alt")
 
-    bot.msg_dic[str(user.id)]["alt"] = None
-    bot.msg_dic[str(alt.id)]["is_alt"] = False
+    else:
+        bot.msg_dic[str(user.id)]["alt"] = None
+        bot.msg_dic[str(alt.id)]["is_alt"] = False
+        update_json()
 
-    update_json()
-
-    await ctx.send(f"{alt.name} is no longer an alt of {user.name}")
+        await ctx.send(f"{alt} is no longer an alt of {user}")
 
 
 @bot.command()
 @commands.has_guild_permissions(manage_channels=True)
 async def delete(ctx, user: discord.User):
     """delete a user from the leaderboard"""
-    # command to delete entries from the leaderboard
     try:
         bot.msg_dic.pop(str(user.id))
         update_json()
         await ctx.send(f"{user} was deleted")
     except KeyError:
-        await ctx.send(f"Error: user '{user.name}' is not listed in the leaderboard")
+        await ctx.send(f"Error: {user} is not listed in the leaderboard")
 
 
 @bot.command()
@@ -189,9 +185,14 @@ async def delete(ctx, user: discord.User):
 async def minimum(ctx, value: int):
     """change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)"""
     bot.minimum = value
-    await ctx.send(
-        f"Every user with more than {value} message will now be displayed on the leadeboard"
-    )
+    if value == 1:
+        await ctx.send(
+            f"Every user with more than {value} message will now be displayed on the leadeboard"
+        )
+    else:
+        await ctx.send(
+            f"Every user with more than {value} messages will now be displayed on the leadeboard"
+        )
 
 
 @minimum.error
@@ -205,21 +206,18 @@ async def minimum_err(ctx, error):
 @bot.command()
 async def source(ctx):
     """prints the source code link"""
-    # command to print the source link
     await ctx.send("https://github.com/RafaeI11/Message_LeaderBot")
 
 
 @bot.command()
 async def minfo(ctx):
     """prints the current minimum value to appear on the leaderboard"""
-    # command to print the current value of minimum
     await ctx.send(f"The current minimum is {bot.minimum} messages")
 
 
 @bot.command()
 async def name(ctx):
     """updates author's name on the leadeboard"""
-    # command to update a user's name
     author = ctx.author
 
     if str(author.id) not in bot.msg_dic:
@@ -230,8 +228,9 @@ async def name(ctx):
     if name == bot.msg_dic[str(author.id)]["name"]:
         return await ctx.send("Your name is already up to date")
 
-    bot.msg_dic[author.id]["name"] = name
-    await ctx.send(f"Name updated to {name}")
+    else:
+        bot.msg_dic[str(author.id)]["name"] = name
+        await ctx.send(f"Name updated to {name}")
 
 
 @bot.command()
@@ -243,9 +242,11 @@ async def msglb(ctx):
     msg_dic = bot.msg_dic
 
     for id in msg_dic:
+        # excludes alt users from the leadeboard
         if not msg_dic[id]["alt"] and not msg_dic[id]["is_alt"]:
             simple_msg_dic[id] = msg_dic[id]["messages"]
 
+        # sums the number of messages of users with alts to its respective alts
         if msg_dic[id]["alt"] and not msg_dic[id]["is_alt"]:
             simple_msg_dic[id] = (
                 msg_dic[id]["messages"] + msg_dic[msg_dic[id]["alt"]]["messages"]
@@ -260,7 +261,7 @@ async def msglb(ctx):
     for item in almost_sorted_msg_dic:
         sorted_msg_dic[str(item[0])] = int(item[1])
 
-    # restricts the leaderboard to only users with more than 20k messages
+    # restricts the leaderboard to only users with more than a certain minimum
     for user in sorted_msg_dic:
         # prevents Steve from being on the top
         if user == "657571924527808512":
