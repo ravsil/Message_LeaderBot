@@ -1,6 +1,6 @@
 import json
 
-from discord.ext import commands
+from discord.ext import commands, tasks
 
 import discord
 
@@ -21,11 +21,34 @@ class HelpCmd(commands.HelpCommand):
     send_cog_help = send_command_help = send_group_help = send_bot_help
 
 
-bot = commands.Bot(
-    command_prefix="-",
-    help_command=HelpCmd(),
-    allowed_mentions=discord.AllowedMentions.none(),
-)
+class MsgLeaderBot(commands.Bot):
+    def __init__(self):
+        super().__init__(
+            command_prefix="-",
+            help_command=HelpCmd(),
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+        # start json updater
+        self.json_updater.start()
+
+    async def on_ready(self):
+        # launch everytime bot is online (not only first boot)
+        # just a way to know if the bot is online
+        print("Bot online!")
+
+    @tasks.loop(hours=8)
+    async def json_updater(self):
+        # update json every 8 hours
+        print("Updated!")
+        update_json()
+
+    @json_updater.before_loop
+    async def before_update(self):
+        # wait until bot is ready before updating json
+        await bot.wait_until_ready()
+
+
+bot = MsgLeaderBot()
 
 bot.minimum = 20000
 bot.listen_to_all = True
@@ -306,13 +329,6 @@ async def on_command_error(ctx, error: commands.CommandError, *, bypass_check: b
         return await ctx.send(f"Error: {error[0].lower()}{error[1:-1]}")
 
     raise error
-
-
-@bot.event
-async def on_ready():
-    # launch everytime bot is online (not only first boot)
-    # just a way to know if the bot is online
-    print("Bot online!")
 
 
 if __name__ == "__main__":
