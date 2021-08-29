@@ -50,24 +50,39 @@ class MsgLeaderBot(commands.Bot):
 
 bot = MsgLeaderBot()
 
-bot.minimum = 20000
-bot.listen_to_all = True
+try:
+    with open("settings.json", "r") as a:
+        bot.settings = json.loads(a.read())
+except FileNotFoundError:
+    token = input("input bot token: ")
+    bot.settings = {"token": token, "minimum": 20000, "listen_to_all": True}
+    with open("settings.json", "w+") as a:
+        json.dump(bot.settings, a, indent=4)
 
 filename = "messages.json"
+settings = "settings.json"
 
 try:
-    with open("messages.json", "r") as a:
+    with open("messages.json", "r") as b:
         bot.msg_dic = json.loads(a.read())
 except BaseException:
     bot.msg_dic = {}
-    with open("messages.json", "w+") as a:
-        a.write(json.dumps({}, indent=4))
+    with open("messages.json", "w+") as b:
+        b.write(json.dumps({}, indent=4))
+
+
+def update_settings():
+    temp = f"{uuid.uuid4()}-{settings}.tmp"
+    with open(temp, "w") as c:
+        json.dump(bot.settings.copy(), c, indent=4)
+
+    os.replace(temp, settings)
 
 
 def update_json():
     temp = f"{uuid.uuid4()}-{filename}.tmp"
-    with open(temp, "w") as b:
-        json.dump(bot.msg_dic.copy(), b, indent=4)
+    with open(temp, "w") as d:
+        json.dump(bot.msg_dic.copy(), d, indent=4)
 
     os.replace(temp, filename)
 
@@ -76,14 +91,17 @@ def update_json():
 @commands.has_guild_permissions(manage_channels=True)
 async def autoupdate(ctx):
     """turns on/off automatic addition of new users to the leaderboard"""
-    if bot.listen_to_all:
-        bot.listen_to_all = False
+    if bot.settings["listen_to_all"]:
+        bot.settings["listen_to_all"] = False
+        update_settings()
         return await ctx.send(
             "New users **will not** get added to the leaderboard anymore"
         )
 
-    bot.listen_to_all = True
-    return await ctx.send("New users **will** get added to the leaderboard")
+    else:
+        bot.settings["listen_to_all"] = True
+        update_settings()
+        return await ctx.send("New users **will** get added to the leaderboard")
 
 
 @bot.command()
@@ -128,9 +146,7 @@ async def alt(ctx, user: discord.User, alt: discord.User):
         )
 
     elif bot.msg_dic[str(alt.id)]["is_alt"]:
-        return await ctx.send(
-            f"Error: {alt.name} ({alt.id}) is already an alt"
-        )
+        return await ctx.send(f"Error: {alt.name} ({alt.id}) is already an alt")
 
     else:
         bot.msg_dic[str(user.id)]["alt"] = str(alt.id)
@@ -184,7 +200,8 @@ async def delete(ctx, user: discord.User):
 @commands.has_guild_permissions(manage_channels=True)
 async def minimum(ctx, value: int):
     """change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)"""
-    bot.minimum = value
+    bot.settings["minimum"] = value
+    update_settings()
     if value == 1:
         await ctx.send(
             f"Every user with more than {value} message will now be displayed on the leadeboard"
@@ -212,7 +229,7 @@ async def source(ctx):
 @bot.command()
 async def minfo(ctx):
     """prints the current minimum value to appear on the leaderboard"""
-    await ctx.send(f"The current minimum is {bot.minimum} messages")
+    await ctx.send(f"The current minimum is {bot.settings['minimum']} messages")
 
 
 @bot.command()
@@ -266,7 +283,7 @@ async def msglb(ctx):
         # prevents Steve from being on the top
         if user == "657571924527808512":
             pass
-        elif int(sorted_msg_dic[user]) >= bot.minimum:
+        elif int(sorted_msg_dic[user]) >= bot.settings["minimum"]:
             if msg_dic[user]["alt"] is not None:
                 msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
             else:
@@ -288,7 +305,7 @@ async def on_message(message):
         return
 
     # adds a point to the author everytime a message is sent
-    if str(message.author.id) not in bot.msg_dic and bot.listen_to_all:
+    if str(message.author.id) not in bot.msg_dic and bot.settings["listen_to_all"]:
         bot.msg_dic[str(message.author.id)] = {
             "messages": 1,
             "name": message.author.name,
@@ -309,7 +326,9 @@ async def on_message_delete(message):
 
 
 @bot.event
-async def on_command_error(ctx, error: commands.CommandError, *, bypass_check: bool = False):
+async def on_command_error(
+    ctx, error: commands.CommandError, *, bypass_check: bool = False
+):
     # handles command error
 
     if ctx.command and ctx.command.has_error_handler() and not bypass_check:
@@ -338,11 +357,4 @@ async def on_command_error(ctx, error: commands.CommandError, *, bypass_check: b
     raise error
 
 
-if __name__ == "__main__":
-    # allows launching the bot using `python main.py [TOKEN]` command
-    import sys
-
-    try:
-        bot.run(sys.argv[1], reconnect=True)
-    except IndexError:
-        print(f"Usage: python {sys.argv[0]} [TOKEN]")
+bot.run(bot.settings["token"])
