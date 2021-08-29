@@ -1,219 +1,348 @@
-from asyncio import events
 import discord
+from discord.ext import commands, tasks
 import json
+import os
+import uuid
 
-client = discord.Client()
-# temporary stuff, i'll change later
-minimum = {"value": 20000}  
-listen_to_all = {"value": True}
+
+class HelpCmd(commands.HelpCommand):
+    async def send_bot_help(self, mapping):
+        ctx = self.context
+        bot = ctx.bot
+        commands = bot.commands
+
+        result = []
+        for cmd in commands:
+            sign = self.get_command_signature(cmd)
+            result.append(f"`{sign}`: {cmd.help}")
+
+        await ctx.send("\n\n".join(result))
+
+    send_cog_help = send_command_help = send_group_help = send_bot_help
+
+
+class MsgLeaderBot(commands.Bot):
+    def __init__(self):
+        super().__init__(
+            command_prefix="-",
+            help_command=HelpCmd(),
+            allowed_mentions=discord.AllowedMentions.none(),
+        )
+        # start json updater
+        self.json_updater.start()
+
+    async def on_ready(self):
+        # launch everytime bot is online (not only first boot)
+        # just a way to know if the bot is online
+        print("Bot online!")
+
+    @tasks.loop(hours=8)
+    async def json_updater(self):
+        # update json every 8 hours
+        print("Updated!")
+        update_json()
+
+    @json_updater.before_loop
+    async def before_update(self):
+        # wait until bot is ready before updating json
+        await bot.wait_until_ready()
+
+
+bot = MsgLeaderBot()
+
+bot.minimum = 20000
+bot.listen_to_all = True
+
+filename = "messages.json"
 
 try:
     with open("messages.json", "r") as a:
-        msg_dic = json.loads(a.read())
-except:
-    msg_dic = {}
+        bot.msg_dic = json.loads(a.read())
+except BaseException:
+    bot.msg_dic = {}
+    with open("messages.json", "w+") as a:
+        a.write(json.dumps({}, indent=4))
 
 
 def update_json():
-    msg_json = json.dumps(msg_dic, indent=1)
-    with open("messages.json", "w") as b:
-        b.write(msg_json)
+    temp = f"{uuid.uuid4()}-{filename}.tmp"
+    with open(temp, "w") as b:
+        json.dump(bot.msg_dic.copy(), b, indent=4)
+
+    os.replace(temp, filename)
 
 
-@client.event
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
+async def autoupdate(ctx):
+    """turns on/off automatic addition of new users to the leaderboard"""
+    if bot.listen_to_all:
+        bot.listen_to_all = False
+        return await ctx.send(
+            "New users **will not** get added to the leaderboard anymore"
+        )
+
+    bot.listen_to_all = True
+    return await ctx.send("New users **will** get added to the leaderboard")
+
+
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
+async def edit(ctx, user: discord.User, message_number: int):
+    """update a user's message number"""
+    name = user.name
+
+    bot.msg_dic[user.id] = {
+        "messages": message_number,
+        "name": name,
+        "alt": None,
+        "is_alt": False,
+    }
+    update_json()
+    await ctx.send(f"{name} was saved with {message_number} messages")
+
+
+@edit.error
+async def edit_err(ctx, error):
+    # error handler for minimum command
+    if isinstance(error, commands.BadArgument):
+        return await ctx.send("Error: you must input a valid number of messages")
+    await on_command_error(ctx, error, bypass_check=True)
+
+
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
+async def alt(ctx, user: discord.User, alt: discord.User):
+    """adds up the alt's messages to the user's messages (1 alt per user)"""
+    if user == alt:
+        return await ctx.send(f"{user} can't be an alt of itself")
+
+    elif str(user.id) not in bot.msg_dic:
+        return await ctx.send(
+            f"Error: {user} not found, try doing `-edit {user.id} [message_number]` first"
+        )
+
+    elif str(alt.id) not in bot.msg_dic:
+        return await ctx.send(
+            f"Error: {alt} not found, try doing `-edit {alt.id} [message_number]` first"
+        )
+
+    elif bot.msg_dic[str(alt.id)]["is_alt"]:
+        return await ctx.send(
+            f"Error: {alt.name} ({alt.id}) is already an alt"
+        )
+
+    else:
+        bot.msg_dic[str(user.id)]["alt"] = str(alt.id)
+        bot.msg_dic[str(alt.id)]["is_alt"] = True
+        update_json()
+
+        await ctx.send(f"{alt} was saved as an alt of {user}")
+
+
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
+async def removealt(ctx, user: discord.User, alt: discord.User):
+    """removes alt from user"""
+    # command to remove an user's alt
+    if user == alt:
+        return await ctx.send(f"{user} can't be an alt of itself")
+
+    elif str(user.id) not in bot.msg_dic:
+        return await ctx.send(f"Error: {user} not found")
+
+    elif str(alt.id) not in bot.msg_dic:
+        return await ctx.send(f"Error: {alt} not found")
+
+    elif not bot.msg_dic[str(user.id)]["alt"]:
+        return await ctx.send(f"Error: {user} has no alts")
+
+    elif not bot.msg_dic[str(alt.id)]["is_alt"]:
+        return await ctx.send(f"Error: {alt} is not an alt")
+
+    else:
+        bot.msg_dic[str(user.id)]["alt"] = None
+        bot.msg_dic[str(alt.id)]["is_alt"] = False
+        update_json()
+
+        await ctx.send(f"{alt} is no longer an alt of {user}")
+
+
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
+async def delete(ctx, user: discord.User):
+    """delete a user from the leaderboard"""
+    try:
+        bot.msg_dic.pop(str(user.id))
+        update_json()
+        await ctx.send(f"{user} was deleted")
+    except KeyError:
+        await ctx.send(f"Error: {user} is not listed in the leaderboard")
+
+
+@bot.command()
+@commands.has_guild_permissions(manage_channels=True)
+async def minimum(ctx, value: int):
+    """change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)"""
+    bot.minimum = value
+    if value == 1:
+        await ctx.send(
+            f"Every user with more than {value} message will now be displayed on the leadeboard"
+        )
+    else:
+        await ctx.send(
+            f"Every user with more than {value} messages will now be displayed on the leadeboard"
+        )
+
+
+@minimum.error
+async def minimum_err(ctx, error):
+    # error handler for minimum command
+    if isinstance(error, commands.BadArgument):
+        return await ctx.send("Error: invalid value")
+    await on_command_error(ctx, error, bypass_check=True)
+
+
+@bot.command()
+async def source(ctx):
+    """prints the source code link"""
+    await ctx.send("https://github.com/RafaeI11/Message_LeaderBot")
+
+
+@bot.command()
+async def minfo(ctx):
+    """prints the current minimum value to appear on the leaderboard"""
+    await ctx.send(f"The current minimum is {bot.minimum} messages")
+
+
+@bot.command()
+async def name(ctx):
+    """updates author's name on the leadeboard"""
+    author = ctx.author
+
+    if str(author.id) not in bot.msg_dic:
+        return
+
+    name = author.name
+
+    if name == bot.msg_dic[str(author.id)]["name"]:
+        return await ctx.send("Your name is already up to date")
+
+    else:
+        bot.msg_dic[str(author.id)]["name"] = name
+        await ctx.send(f"Name updated to {name}")
+
+
+@bot.command()
+async def msglb(ctx):
+    """prints the message leaderboard"""
+    update_json()
+    simple_msg_dic = {}
+    msg_lb = ""
+    msg_dic = bot.msg_dic
+
+    for id in msg_dic:
+        # excludes alt users from the leadeboard
+        if not msg_dic[id]["alt"] and not msg_dic[id]["is_alt"]:
+            simple_msg_dic[id] = msg_dic[id]["messages"]
+
+        # sums the number of messages of users with alts to its respective alts
+        if msg_dic[id]["alt"] and not msg_dic[id]["is_alt"]:
+            simple_msg_dic[id] = (
+                msg_dic[id]["messages"] + msg_dic[msg_dic[id]["alt"]]["messages"]
+            )
+
+    # sorts the leaderboard by most messages in probably the ugliest way possible
+    almost_sorted_msg_dic = sorted(
+        simple_msg_dic.items(), key=lambda x: x[1], reverse=True
+    )
+    sorted_msg_dic = {}
+
+    for item in almost_sorted_msg_dic:
+        sorted_msg_dic[str(item[0])] = int(item[1])
+
+    # restricts the leaderboard to only users with more than a certain minimum
+    for user in sorted_msg_dic:
+        # prevents Steve from being on the top
+        if user == "657571924527808512":
+            pass
+        elif int(sorted_msg_dic[user]) >= bot.minimum:
+            if msg_dic[user]["alt"] is not None:
+                msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
+            else:
+                msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
+
+    # adds steve to the end
+    if "657571924527808512" in simple_msg_dic:
+        msg_lb += f"\n {simple_msg_dic['657571924527808512']}: Steve the bot"
+
+    embed = discord.Embed(
+        title="Message Leaderboard", color=7419530, description=msg_lb
+    )
+    await ctx.send(embed=embed)
+
+
+@bot.event
 async def on_message(message):
-    if message.author == client.user:
+    if message.author == bot.user:
         return
 
     # adds a point to the author everytime a message is sent
-    if message.content.startswith(""):
-        if str(message.author.id) not in msg_dic and listen_to_all["value"] is True:
-            name = str(message.author).split("#")
-            msg_dic[str(message.author.id)] = {
-                "messages": 1,
-                "name": name[0],
-                "alt": None,
-                "is_alt": False,
-            }
-        elif str(message.author.id) in msg_dic:
-            msg_dic[str(message.author.id)]["messages"] += 1
+    if str(message.author.id) not in bot.msg_dic and bot.listen_to_all:
+        bot.msg_dic[str(message.author.id)] = {
+            "messages": 1,
+            "name": message.author.name,
+            "alt": None,
+            "is_alt": False,
+        }
 
-    if message.author.guild_permissions.manage_channels:
-        # command to turn on/off automatic addition of new users to the leaderboard
-        if message.content.startswith("-autoupdate"):
-            if listen_to_all["value"] == True:
-                listen_to_all["value"] = False
-                await message.channel.send("New users will **not** get added to the leaderboard anymore")
-            elif listen_to_all["value"] == False:
-                listen_to_all["value"] = True
-                await message.channel.send("New users **will** get added to the leaderboard")
-        
-        
-        # command to add/update new entries to the leaderboard
-        if message.content.startswith("-edit"):
-            edit_content = message.content.split()
-            try:
-                user_name = await client.fetch_user(edit_content[1])
-                user_name = str(user_name).split("#")
-            except:
-                user_name = ["Invalid User", ""]
-            try:
-                if not edit_content[1].isdigit() or not edit_content[2].isdigit():
-                    await message.channel.send("Error: invalid id/number")
-                else:
-                    msg_dic[edit_content[1]] = {
-                        "messages": int(edit_content[2]),
-                        "name": user_name[0],
-                        "alt": None,
-                        "is_alt": False,
-                    }
-                    update_json()
-                    await message.channel.send(
-                        f"{user_name[0]} was saved with {edit_content[2]} messages"
-                    )
-            except:
-                await message.channel.send(
-                    "Error: you must input an valid id and a number of messages"
-                )
-        # command to save an user as someone else's alt
-        if message.content.startswith("-alt"):
-            main, alt = message.content.split()[1:]
+    elif str(message.author.id) in bot.msg_dic:
+        bot.msg_dic[str(message.author.id)]["messages"] += 1
 
-            if main == alt:
-                await message.channel.send(f"{main} can't be an alt of itself")
-            elif main not in msg_dic:
-                await message.channel.send(f"Error: {main} not found, try doing `-edit {main} [message_number]` first")
-            elif alt not in msg_dic:
-                await message.channel.send(f"Error: {alt} not found, try doing `-edit {alt} [message_number]` first")
-            elif msg_dic[alt]["is_alt"]:
-                await message.channel.send(
-                    f"Error: {msg_dic[alt]['name']} ({alt}) is already an alt"
-                )
-            else:
-                msg_dic[main]["alt"] = alt
-                msg_dic[alt]["is_alt"] = True
-                update_json()
-                await message.channel.send(
-                    f"{msg_dic[alt]['name']} was saved as an alt of {msg_dic[main]['name']}"
-                )
-                
-        if message.content.startswith("-removealt"):
-            main, alt = message.content.split()[1:]
-
-            if main == alt:
-                await message.channel.send(f"{main} can't be an alt of itself")
-            elif main not in msg_dic:
-                await message.channel.send(f"Error: {main} not found")
-            elif alt not in msg_dic:
-                await message.channel.send(f"Error: {alt} not found")
-            elif msg_dic[main]["alt"] is None:
-                await message.channel.send(f"Error: {main} has no alts")
-            elif msg_dic[alt]["is_alt"] == False:
-                await message.channel.send(f"Error: {alt} is not an alt")
-            else:
-                msg_dic[main]["alt"] = None
-                msg_dic[alt]["is_alt"] = False
-                update_json()
-                await message.channel.send(
-                    f"{msg_dic[alt]['name']} is no longer an alt of {msg_dic[main]['name']}"
-                )
-
-        # command to delete entries from the leaderboard
-        if message.content.startswith("-delete"):
-            del_content = message.content.split()
-            
-            try:
-                await message.channel.send(
-                    f"{msg_dic[del_content[1]]['name']} was deleted"
-                )
-                msg_dic.pop(del_content[1])
-                update_json()
-            except:
-                await message.channel.send("Error: invalid id")
-
-        # command to change the minimum amount of messages necessary to appear on the leaderboard
-        if message.content.startswith("-minimum"):
-            try:
-                minimum["value"] = int(message.content.split()[1])
-                await message.channel.send(
-                    f"Every user with more than {message.content.split()[1]} message will now be displayed on the leadeboard"
-                )
-            except:
-                await message.channel.send("Error: invalid value")
-
-    # help command
-    if message.content.startswith("-help"):
-        await message.channel.send(
-            "`-msglb`: prints the message leaderboard\n\n`-autoupdate`: turns on/off automatic addition of new users to the leaderboard\n\n`-edit [user_id] [message_number]`: update a user's message number\n\n`-delete [user_id]`: delete a user from the leaderboard\n\n`-alt [user_id] [alt_id]`: adds up the alt's messages to the user's messages (1 alt per user)\n\n`-removealt [user_id] [alt_id]`: removes alt from user\n\n`-minimum [value]`: change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)\n\n`-minfo`: prints the current minimum value to appear on the leaderboard\n\n`-name`: updates author's name on the leadeboard\n\n`-source`: prints the source code link"
-        )
-
-    # command to print the source link
-    if message.content.startswith("-source"):
-        await message.channel.send("https://github.com/RafaeI11/Message_LeaderBot")
-
-    # command to print the current value of minimum
-    if message.content.startswith("-minfo"):
-        await message.channel.send(
-            f"The current minimum is {minimum['value']} messages"
-        )
-
-    # command to update a user's name
-    if message.content.startswith("-name"):
-        if str(message.author.id) not in msg_dic:
-            pass
-        else:
-            name = str(message.author).split("#")
-            if name[0] == msg_dic[str(message.author.id)]["name"]:
-                await message.channel.send("Your name is already up to date")
-            else:
-                msg_dic[message.author.id]["name"] = name[0]
-                await message.channel.send(f"Name updated to {name[0]}")
-
-    # command to print the message leaderboard
-    if message.content.startswith("-msglb"):
-        update_json()
-        simple_msg_dic = {}
-        msg_lb = ""
-        
-        for id in msg_dic:
-            if msg_dic[id]["alt"] is None and msg_dic[id]["is_alt"] == False:
-                simple_msg_dic[id] = msg_dic[id]["messages"]
-
-            if msg_dic[id]["alt"] is not None and msg_dic[id]["is_alt"] == False:
-                simple_msg_dic[id] = (
-                    msg_dic[id]["messages"] + msg_dic[msg_dic[id]["alt"]]["messages"]
-                )
-
-        # sorts the leaderboard by most messages in probably the ugliest way possible
-        almost_sorted_msg_dic = sorted(
-            simple_msg_dic.items(), key=lambda x: x[1], reverse=True
-        )
-        sorted_msg_dic = {}
-
-        for item in almost_sorted_msg_dic:
-            sorted_msg_dic[str(item[0])] = int(item[1])
-
-        # restricts the leaderboard to only users with more than 20k messages
-        for user in sorted_msg_dic:
-            # prevents Steve from being on the top
-            if user == "657571924527808512":
-                pass
-            elif int(sorted_msg_dic[user]) >= minimum["value"]:
-                if msg_dic[user]["alt"] is not None:
-                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
-                else:
-                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
-        
-        # adds steve to the end
-        if '657571924527808512' in simple_msg_dic:
-            msg_lb += f"\n {simple_msg_dic['657571924527808512']}: Steve the bot"
-        
-        embed = discord.Embed(
-            title="Message Leaderboard", color=7419530, description=msg_lb
-        )
-        await message.channel.send(embed=embed)
+    # process a command (if valid)
+    await bot.process_commands(message)
 
 
-@client.event
+@bot.event
 async def on_message_delete(message):
-    msg_dic[str(message.author.id)]["messages"] -= 1
+    bot.msg_dic[str(message.author.id)]["messages"] -= 1
+
+
+@bot.event
+async def on_command_error(ctx, error: commands.CommandError, *, bypass_check: bool = False):
+    # handles command error
+
+    if ctx.command and ctx.command.has_error_handler() and not bypass_check:
+        # already have error handler
+        return
+
+    # get the "real" error
+    error = getattr(error, "original", error)
+
+    if isinstance(error, commands.CommandNotFound):
+        # command not found is annoying for most bot user, so just return nothing
+        return
+
+    if isinstance(error, commands.UserNotFound):
+        return await ctx.send(f"Error: user '{error.argument}' not found")
+
+    if isinstance(error, commands.MissingRequiredArgument):
+        return await ctx.send(f"Error: you must input a valid `{error.param.name}`")
+
+    if isinstance(error, commands.MissingPermissions):
+        # probably i made it too over-complicated,
+        # but its so that the message stays consistent with the other error messages
+        error = str(error)
+        return await ctx.send(f"Error: {error[0].lower()}{error[1:-1]}")
+
+    raise error
+
+
+if __name__ == "__main__":
+    # allows launching the bot using `python main.py [TOKEN]` command
+    import sys
+
+    try:
+        bot.run(sys.argv[1], reconnect=True)
+    except IndexError:
+        print(f"Usage: python {sys.argv[0]} [TOKEN]")
