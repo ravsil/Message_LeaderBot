@@ -203,7 +203,7 @@ async def addbot(ctx, user: discord.User):
 @bot.command()
 @commands.has_guild_permissions(manage_channels=True)
 async def rmvbot(ctx, user: discord.User):
-    """removes bot tag form a user"""
+    """removes bot tag from a user"""
     if not bot.msg_dic[str(user.id)]["is_bot"]:
         await ctx.send(f"{user} is already not a bot")
 
