@@ -1,8 +1,9 @@
 import json
-
-from discord.ext import commands, tasks
+import os
+import uuid
 
 import discord
+from discord.ext import commands, tasks
 
 
 class HelpCmd(commands.HelpCommand):
@@ -53,6 +54,8 @@ bot = MsgLeaderBot()
 bot.minimum = 20000
 bot.listen_to_all = True
 
+filename = "messages.json"
+
 try:
     with open("messages.json", "r") as a:
         bot.msg_dic = json.loads(a.read())
@@ -63,8 +66,11 @@ except BaseException:
 
 
 def update_json():
-    with open("messages.json", "w") as b:
-        b.write(json.dumps(bot.msg_dic, indent=4))
+    temp = "{}-{}.tmp".format(uuid.uuid4(), filename)
+    with open(temp, "w") as tmp:
+        json.dump(bot.msg_dic.copy(), tmp, indent=4)
+
+    os.replace(temp, filename)
 
 
 @bot.command()
