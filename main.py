@@ -14,7 +14,7 @@ class HelpCmd(commands.HelpCommand):
         result = []
         for cmd in commands:
             sign = self.get_command_signature(cmd)
-            result.append(f"`{sign}`: {cmd.help}")
+            result.append(f"`{sign.strip()}`: {cmd.help}")
 
         await ctx.send("\n\n".join(result))
 
@@ -23,9 +23,12 @@ class HelpCmd(commands.HelpCommand):
 
 class MsgLeaderBot(commands.Bot):
     def __init__(self):
+        helpattr = {
+            "usage": ""
+        }
         super().__init__(
             command_prefix="-",
-            help_command=HelpCmd(),
+            help_command=HelpCmd(command_attrs=helpattr),
             allowed_mentions=discord.AllowedMentions.none(),
         )
         # start json updater
