@@ -395,7 +395,11 @@ async def on_message(message):
 
 @bot.event
 async def on_message_delete(message):
-    bot.msg_dic[str(message.guild.id)][str(message.author.id)]["messages"] -= 1
+    user = str(message.author.id)
+    server = str(message.guild.id)
+    
+    if user in bot.msg_dic[server]:
+        bot.msg_dic[server][user]["messages"] -= 1
 
 
 @bot.event
