@@ -56,7 +56,7 @@ try:
         bot.settings = json.loads(a.read())
 except FileNotFoundError:
     token = input("input bot token: ")
-    bot.settings = {"token": token, "minimum": 20000, "listen_to_all": True}
+    bot.settings = {"token": token}
     with open("settings.json", "w+") as a:
         json.dump(bot.settings, a, indent=4)
 
@@ -90,15 +90,17 @@ def update_json():
 @commands.has_guild_permissions(manage_channels=True)
 async def autoupdate(ctx):
     """turns on/off automatic addition of new users to the leaderboard"""
-    if bot.settings["listen_to_all"]:
-        bot.settings["listen_to_all"] = False
+    server = str(ctx.message.guild.id)
+
+    if bot.settings[server]["listen_to_all"]:
+        bot.settings[server]["listen_to_all"] = False
         update_settings()
         return await ctx.send(
             "New users **will not** get added to the leaderboard anymore"
         )
 
     else:
-        bot.settings["listen_to_all"] = True
+        bot.settings[server]["listen_to_all"] = True
         update_settings()
         return await ctx.send("New users **will** get added to the leaderboard")
 
@@ -238,7 +240,8 @@ async def delete(ctx, user: discord.User):
 @commands.has_guild_permissions(manage_channels=True)
 async def minimum(ctx, value: int):
     """change the minimum amount of messages necessary to appear on the leaderboard (defaults to 20000)"""
-    bot.settings["minimum"] = value
+    server = str(ctx.message.guild.id)
+    bot.settings[server]["minimum"] = value
     update_settings()
     if value == 1:
         await ctx.send(
@@ -267,7 +270,9 @@ async def source(ctx):
 @bot.command()
 async def minfo(ctx):
     """prints the current minimum value to appear on the leaderboard"""
-    await ctx.send(f"The current minimum is {bot.settings['minimum']} messages")
+    await ctx.send(
+        f"The current minimum is {bot.settings[str(ctx.message.guild.id)]['minimum']} messages"
+    )
 
 
 @bot.command()
@@ -293,10 +298,11 @@ async def name(ctx):
 async def msglb(ctx):
     """prints the message leaderboard"""
     update_json()
+    server = str(ctx.message.guild.id)
     simple_msg_dic = {}
     msg_lb = ""
     bots_lb = ""
-    msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
+    msg_dic = bot.msg_dic[server]
 
     for id in msg_dic:
         # excludes alt users from the leadeboard
@@ -320,7 +326,7 @@ async def msglb(ctx):
 
     # restricts the leaderboard to only users with more than a certain minimum
     for user in sorted_msg_dic:
-        if int(sorted_msg_dic[user]) >= bot.settings["minimum"]:
+        if int(sorted_msg_dic[user]) >= bot.settings[server]["minimum"]:
             # prevents bots from being on the top
             if msg_dic[user]["is_bot"]:
                 bots_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
@@ -345,6 +351,15 @@ async def on_message(message):
         bot.msg_dic[server]
     except KeyError:
         bot.msg_dic[server] = {}
+
+    try:
+        bot.settings[server]["minimum"]
+        bot.settings[server]["listen_to_all"]
+    except KeyError:
+        bot.settings[server] = {}
+        bot.settings[server]["minimum"] = 20000
+        bot.settings[server]["listen_to_all"] = True
+        update_settings()
 
     if message.author == bot.user:
         return
