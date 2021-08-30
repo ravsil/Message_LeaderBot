@@ -23,9 +23,7 @@ class HelpCmd(commands.HelpCommand):
 
 class MsgLeaderBot(commands.Bot):
     def __init__(self):
-        helpattr = {
-            "usage": ""
-        }
+        helpattr = {"usage": ""}
         super().__init__(
             command_prefix="-",
             help_command=HelpCmd(command_attrs=helpattr),
@@ -110,8 +108,9 @@ async def autoupdate(ctx):
 async def edit(ctx, user: discord.User, message_number: int):
     """update a user's message number"""
     name = user.name
-    if str(user.id) not in bot.msg_dic:
-        bot.msg_dic[str(user.id)] = {
+    server = str(ctx.message.guild.id)
+    if str(user.id) not in bot.msg_dic[server]:
+        bot.msg_dic[server][str(user.id)] = {
             "messages": message_number,
             "name": name,
             "alt": None,
@@ -119,7 +118,7 @@ async def edit(ctx, user: discord.User, message_number: int):
             "is_bot": False,
         }
     else:
-        bot.msg_dic[str(user.id)]["messages"] = message_number
+        bot.msg_dic[server][str(user.id)]["messages"] = message_number
     update_json()
     await ctx.send(f"{name} was saved with {message_number} messages")
 
@@ -136,25 +135,26 @@ async def edit_err(ctx, error):
 @commands.has_guild_permissions(manage_channels=True)
 async def alt(ctx, user: discord.User, alt: discord.User):
     """adds up the alt's messages to the user's messages (1 alt per user)"""
+    server = str(ctx.message.guild.id)
     if user == alt:
         return await ctx.send(f"{user} can't be an alt of itself")
 
-    elif str(user.id) not in bot.msg_dic:
+    elif str(user.id) not in bot.msg_dic[server]:
         return await ctx.send(
             f"Error: {user} not found, try doing `-edit {user.id} <message_number>` first"
         )
 
-    elif str(alt.id) not in bot.msg_dic:
+    elif str(alt.id) not in bot.msg_dic[server]:
         return await ctx.send(
             f"Error: {alt} not found, try doing `-edit {alt.id} <message_number>` first"
         )
 
-    elif bot.msg_dic[str(alt.id)]["is_alt"]:
+    elif bot.msg_dic[server][str(alt.id)]["is_alt"]:
         return await ctx.send(f"Error: {alt.name} ({alt.id}) is already an alt")
 
     else:
-        bot.msg_dic[str(user.id)]["alt"] = str(alt.id)
-        bot.msg_dic[str(alt.id)]["is_alt"] = True
+        bot.msg_dic[server][str(user.id)]["alt"] = str(alt.id)
+        bot.msg_dic[server][str(alt.id)]["is_alt"] = True
         update_json()
 
         await ctx.send(f"{alt} was saved as an alt of {user}")
@@ -164,25 +164,26 @@ async def alt(ctx, user: discord.User, alt: discord.User):
 @commands.has_guild_permissions(manage_channels=True)
 async def removealt(ctx, user: discord.User, alt: discord.User):
     """removes alt from user"""
+    server = str(ctx.message.guild.id)
     # command to remove an user's alt
     if user == alt:
         return await ctx.send(f"{user} can't be an alt of itself")
 
-    elif str(user.id) not in bot.msg_dic:
+    elif str(user.id) not in bot.msg_dic[server]:
         return await ctx.send(f"Error: {user} not found")
 
-    elif str(alt.id) not in bot.msg_dic:
+    elif str(alt.id) not in bot.msg_dic[server]:
         return await ctx.send(f"Error: {alt} not found")
 
-    elif not bot.msg_dic[str(user.id)]["alt"]:
+    elif not bot.msg_dic[server][str(user.id)]["alt"]:
         return await ctx.send(f"Error: {user} has no alts")
 
-    elif not bot.msg_dic[str(alt.id)]["is_alt"]:
+    elif not bot.msg_dic[server][str(alt.id)]["is_alt"]:
         return await ctx.send(f"Error: {alt} is not an alt")
 
     else:
-        bot.msg_dic[str(user.id)]["alt"] = None
-        bot.msg_dic[str(alt.id)]["is_alt"] = False
+        bot.msg_dic[server][str(user.id)]["alt"] = None
+        bot.msg_dic[server][str(alt.id)]["is_alt"] = False
         update_json()
 
         await ctx.send(f"{alt} is no longer an alt of {user}")
@@ -192,11 +193,12 @@ async def removealt(ctx, user: discord.User, alt: discord.User):
 @commands.has_guild_permissions(manage_channels=True)
 async def addbot(ctx, user: discord.User):
     """saves a user as a bot (displayed on the bottom of the leaderboard)"""
-    if bot.msg_dic[str(user.id)]["is_bot"]:
+    server = str(ctx.message.guild.id)
+    if bot.msg_dic[server][str(user.id)]["is_bot"]:
         await ctx.send(f"{user} is already a bot")
 
     try:
-        bot.msg_dic[str(user.id)]["is_bot"] = True
+        bot.msg_dic[server][str(user.id)]["is_bot"] = True
         update_json()
         await ctx.send(f"{user} is now a bot")
     except KeyError:
@@ -207,11 +209,12 @@ async def addbot(ctx, user: discord.User):
 @commands.has_guild_permissions(manage_channels=True)
 async def rmvbot(ctx, user: discord.User):
     """removes bot tag from a user"""
-    if not bot.msg_dic[str(user.id)]["is_bot"]:
+    server = str(ctx.message.guild.id)
+    if not bot.msg_dic[server][str(user.id)]["is_bot"]:
         await ctx.send(f"{user} is already not a bot")
 
     try:
-        bot.msg_dic[str(user.id)]["is_bot"] = False
+        bot.msg_dic[server][str(user.id)]["is_bot"] = False
         update_json()
         await ctx.send(f"{user} is no longer a bot")
     except KeyError:
@@ -222,8 +225,9 @@ async def rmvbot(ctx, user: discord.User):
 @commands.has_guild_permissions(manage_channels=True)
 async def delete(ctx, user: discord.User):
     """delete a user from the leaderboard"""
+    server = str(ctx.message.guild.id)
     try:
-        bot.msg_dic.pop(str(user.id))
+        bot.msg_dic[server].pop(str(user.id))
         update_json()
         await ctx.send(f"{user} was deleted")
     except KeyError:
@@ -270,17 +274,18 @@ async def minfo(ctx):
 async def name(ctx):
     """updates author's name on the leadeboard"""
     author = ctx.author
+    server = str(ctx.message.guild.id)
 
-    if str(author.id) not in bot.msg_dic:
+    if str(author.id) not in bot.msg_dic[server]:
         return
 
     name = author.name
 
-    if name == bot.msg_dic[str(author.id)]["name"]:
+    if name == bot.msg_dic[server][str(author.id)]["name"]:
         return await ctx.send("Your name is already up to date")
 
     else:
-        bot.msg_dic[str(author.id)]["name"] = name
+        bot.msg_dic[server][str(author.id)]["name"] = name
         await ctx.send(f"Name updated to {name}")
 
 
@@ -291,7 +296,7 @@ async def msglb(ctx):
     simple_msg_dic = {}
     msg_lb = ""
     bots_lb = ""
-    msg_dic = bot.msg_dic
+    msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
 
     for id in msg_dic:
         # excludes alt users from the leadeboard
@@ -335,13 +340,22 @@ async def msglb(ctx):
 
 @bot.event
 async def on_message(message):
+    server = str(message.guild.id)
+    try:
+        bot.msg_dic[server]
+    except KeyError:
+        bot.msg_dic[server] = {}
+
     if message.author == bot.user:
         return
 
     # adds a point to the author everytime a message is sent
-    if str(message.author.id) not in bot.msg_dic and bot.settings["listen_to_all"]:
+    if (
+        str(message.author.id) not in bot.msg_dic[server]
+        and bot.settings["listen_to_all"]
+    ):
         if message.author.bot:
-            bot.msg_dic[str(message.author.id)] = {
+            bot.msg_dic[server][str(message.author.id)] = {
                 "messages": 1,
                 "name": message.author.name,
                 "alt": None,
@@ -349,7 +363,7 @@ async def on_message(message):
                 "is_bot": True,
             }
         else:
-            bot.msg_dic[str(message.author.id)] = {
+            bot.msg_dic[server][str(message.author.id)] = {
                 "messages": 1,
                 "name": message.author.name,
                 "alt": None,
@@ -357,8 +371,8 @@ async def on_message(message):
                 "is_bot": False,
             }
 
-    elif str(message.author.id) in bot.msg_dic:
-        bot.msg_dic[str(message.author.id)]["messages"] += 1
+    elif str(message.author.id) in bot.msg_dic[server]:
+        bot.msg_dic[server][str(message.author.id)]["messages"] += 1
 
     # process a command (if valid)
     await bot.process_commands(message)
@@ -366,7 +380,7 @@ async def on_message(message):
 
 @bot.event
 async def on_message_delete(message):
-    bot.msg_dic[str(message.author.id)]["messages"] -= 1
+    bot.msg_dic[str(message.guild.id)][str(message.author.id)]["messages"] -= 1
 
 
 @bot.event
