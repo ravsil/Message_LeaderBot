@@ -36,6 +36,3 @@ With python 3.9 (or newer) installed, download/copy and execute [main.py](https:
 
 `-help`: prints help message
 
-#
-
-##### NOTE: currently only works properly in one server at a time
