@@ -367,7 +367,7 @@ async def on_message(message):
     # adds a point to the author everytime a message is sent
     if (
         str(message.author.id) not in bot.msg_dic[server]
-        and bot.settings["listen_to_all"]
+        and bot.settings[server]["listen_to_all"]
     ):
         if message.author.bot:
             bot.msg_dic[server][str(message.author.id)] = {
