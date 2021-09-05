@@ -36,4 +36,6 @@ If your bot is in more than one server and you want to be safe, download/copy [f
 
 `-msglb`: prints the message leaderboard
 
+`-msg <username>`: prints the user's message number
+
 `-help`: prints help message
