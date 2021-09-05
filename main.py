@@ -344,6 +344,28 @@ async def msglb(ctx):
     await ctx.send(embed=embed)
 
 
+@bot.command()
+async def msg(ctx, username: str):
+    """check how many messages a user has"""
+    server = str(ctx.message.guild.id)
+    msg_count = ""
+
+    for id in bot.msg_dic[server]:
+        if bot.msg_dic[server][id]["name"].lower() == username.lower():
+            msg_count = str(bot.msg_dic[server][id]["messages"])
+
+            if bot.msg_dic[server][id]["alt"]:
+                user_alt = bot.msg_dic[server][id]["alt"]
+                msg_count += f" (+{bot.msg_dic[server][user_alt]['messages']})"
+
+    if msg_count != "":
+        await ctx.send(
+            discord.utils.escape_mentions(f"{username} has {msg_count} messages")
+        )
+    else:
+        await ctx.send(discord.utils.escape_mentions(f"Error: {username} not found"))
+
+
 @bot.event
 async def on_message(message):
     server = str(message.guild.id)
