@@ -364,6 +364,45 @@ async def msg(ctx, username: str):
         )
     else:
         await ctx.send(discord.utils.escape_mentions(f"Error: {username} not found"))
+        
+
+@bot.command()
+async def altinfo(ctx, username: str):
+    """check the name of a user's alt or vice versa"""
+    server = str(ctx.message.guild.id)
+    result = ""
+    case = ""
+
+    for id in bot.msg_dic[server]:
+        if bot.msg_dic[server][id]["name"].lower() == username.lower():
+            if (
+                bot.msg_dic[server][id]["alt"] is None
+                and not bot.msg_dic[server][id]["is_alt"]
+            ):
+                result = ""
+            elif bot.msg_dic[server][id]["alt"]:
+                alt_id = bot.msg_dic[server][id]["alt"]
+                result = bot.msg_dic[server][alt_id]["name"]
+                case = "case1"
+            elif bot.msg_dic[server][id]["is_alt"]:
+                for possible_alt_owner in bot.msg_dic[server]:
+                    print(possible_alt_owner)
+                    if id == bot.msg_dic[server][possible_alt_owner]["alt"]:
+                        result = bot.msg_dic[server][possible_alt_owner]["name"]
+                print(bot.msg_dic[server][id]["alt"])
+                case = "case2"
+
+    if result != "":
+        if case == "case1":
+            await ctx.send(
+                discord.utils.escape_mentions(f"{result} is an alt of {username}")
+            )
+        else:
+            await ctx.send(
+                discord.utils.escape_mentions(f"{username} is an alt of {result}")
+            )
+    else:
+        await ctx.send(discord.utils.escape_mentions(f"Error: {username} not found"))
 
 
 @bot.event
