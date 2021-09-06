@@ -10,8 +10,8 @@ class HelpCmd(commands.HelpCommand):
         ctx = self.context
         bot = ctx.bot
         commands = bot.commands
-
         result = []
+
         for cmd in commands:
             sign = self.get_command_signature(cmd)
             result.append(f"`{sign.strip()}`: {cmd.help}")
@@ -119,8 +119,10 @@ async def edit(ctx, user: discord.User, message_number: int):
             "is_alt": False,
             "is_bot": False,
         }
+
     else:
         bot.msg_dic[server][str(user.id)]["messages"] = message_number
+
     update_json()
     await ctx.send(f"{name} was saved with {message_number} messages")
 
@@ -130,6 +132,7 @@ async def edit_err(ctx, error):
     # error handler for minimum command
     if isinstance(error, commands.BadArgument):
         return await ctx.send("Error: you must input a valid number of messages")
+
     await on_command_error(ctx, error, bypass_check=True)
 
 
@@ -258,6 +261,7 @@ async def minimum_err(ctx, error):
     # error handler for minimum command
     if isinstance(error, commands.BadArgument):
         return await ctx.send("Error: invalid value")
+
     await on_command_error(ctx, error, bypass_check=True)
 
 
@@ -279,18 +283,18 @@ async def minfo(ctx):
 async def name(ctx):
     """updates author's name on the leadeboard"""
     author = ctx.author
-    server = str(ctx.message.guild.id)
+    msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
 
-    if str(author.id) not in bot.msg_dic[server]:
+    if str(author.id) not in msg_dic:
         return
 
     name = author.name
 
-    if name == bot.msg_dic[server][str(author.id)]["name"]:
+    if name == msg_dic[str(author.id)]["name"]:
         return await ctx.send("Your name is already up to date")
 
     else:
-        bot.msg_dic[server][str(author.id)]["name"] = name
+        msg_dic[str(author.id)]["name"] = name
         await ctx.send(f"Name updated to {name}")
 
 
@@ -347,16 +351,16 @@ async def msglb(ctx):
 @bot.command()
 async def msg(ctx, username: str):
     """check how many messages a user has"""
-    server = str(ctx.message.guild.id)
+    msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
     msg_count = ""
 
-    for id in bot.msg_dic[server]:
-        if bot.msg_dic[server][id]["name"].lower() == username.lower():
-            msg_count = str(bot.msg_dic[server][id]["messages"])
+    for id in msg_dic:
+        if msg_dic[id]["name"].lower() == username.lower():
+            msg_count = str(msg_dic[id]["messages"])
 
-            if bot.msg_dic[server][id]["alt"]:
-                user_alt = bot.msg_dic[server][id]["alt"]
-                msg_count += f" (+{bot.msg_dic[server][user_alt]['messages']})"
+            if msg_dic[id]["alt"]:
+                user_alt = msg_dic[id]["alt"]
+                msg_count += f" (+{msg_dic[user_alt]['messages']})"
 
     if msg_count != "":
         await ctx.send(
@@ -364,45 +368,46 @@ async def msg(ctx, username: str):
         )
     else:
         await ctx.send(discord.utils.escape_mentions(f"Error: {username} not found"))
-        
+
 
 @bot.command()
 async def altinfo(ctx, username: str):
     """check the name of a user's alt or vice versa"""
-    server = str(ctx.message.guild.id)
+    msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
     result = ""
     case = ""
 
-    for id in bot.msg_dic[server]:
-        if bot.msg_dic[server][id]["name"].lower() == username.lower():
-            if (
-                bot.msg_dic[server][id]["alt"] is None
-                and not bot.msg_dic[server][id]["is_alt"]
-            ):
+    for id in msg_dic:
+        if msg_dic[id]["name"].lower() == username.lower():
+
+            if msg_dic[id]["alt"] is None and not msg_dic[id]["is_alt"]:
                 result = ""
-            elif bot.msg_dic[server][id]["alt"]:
-                alt_id = bot.msg_dic[server][id]["alt"]
-                result = bot.msg_dic[server][alt_id]["name"]
+
+            elif msg_dic[id]["alt"]:
+                alt_id = msg_dic[id]["alt"]
+                result = msg_dic[alt_id]["name"]
                 case = "case1"
-            elif bot.msg_dic[server][id]["is_alt"]:
-                for possible_alt_owner in bot.msg_dic[server]:
-                    print(possible_alt_owner)
-                    if id == bot.msg_dic[server][possible_alt_owner]["alt"]:
-                        result = bot.msg_dic[server][possible_alt_owner]["name"]
-                print(bot.msg_dic[server][id]["alt"])
+
+            elif msg_dic[id]["is_alt"]:
+                for possible_alt_owner in msg_dic:
+
+                    if id == msg_dic[possible_alt_owner]["alt"]:
+                        result = msg_dic[possible_alt_owner]["name"]
+
                 case = "case2"
 
-    if result != "":
-        if case == "case1":
-            await ctx.send(
-                discord.utils.escape_mentions(f"{result} is an alt of {username}")
-            )
-        else:
-            await ctx.send(
-                discord.utils.escape_mentions(f"{username} is an alt of {result}")
-            )
+    if result != "" and case == "case1":
+        await ctx.send(
+            discord.utils.escape_mentions(f"{result} is an alt of {username}")
+        )
+
+    elif result != "" and case == "case2":
+        await ctx.send(
+            discord.utils.escape_mentions(f"{username} is an alt of {result}")
+        )
+
     else:
-        await ctx.send(discord.utils.escape_mentions(f"Error: {username} not found"))
+        await ctx.send(discord.utils.escape_mentions(f"{username} is not an alt/has no alts"))
 
 
 @bot.event
@@ -457,10 +462,10 @@ async def on_message(message):
 @bot.event
 async def on_message_delete(message):
     user = str(message.author.id)
-    server = str(message.guild.id)
-    
-    if user in bot.msg_dic[server]:
-        bot.msg_dic[server][user]["messages"] -= 1
+    msg_dic = bot.msg_dic[str(message.guild.id)]
+
+    if user in msg_dic:
+        msg_dic[user]["messages"] -= 1
 
 
 @bot.event
