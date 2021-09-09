@@ -375,40 +375,61 @@ async def altinfo(ctx, username: str):
     """check the name of a user's alt or vice versa"""
     msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
     result = ""
-    case = ""
 
-    for id in msg_dic:
-        if msg_dic[id]["name"].lower() == username.lower():
+    # checks if input is a user's id on the leadeboard
+    if username.isdecimal():
+        try:
+            msg_dic[username]
+            success = True
+        except KeyError:
+            await ctx.send(
+                discord.utils.escape_mentions(f"Error: {username} not found")
+            )
 
-            if msg_dic[id]["alt"] is None and not msg_dic[id]["is_alt"]:
-                result = ""
+    # checks if input is a user mention and if user's id is on the leaderboard
+    elif "<@!" in username:
+        username = username.replace("<@!", "").replace(">", "")
 
-            elif msg_dic[id]["alt"]:
-                alt_id = msg_dic[id]["alt"]
-                result = msg_dic[alt_id]["name"]
-                case = "case1"
+        try:
+            msg_dic[username]
+            success = True
+        except KeyError:
+            await ctx.send(
+                discord.utils.escape_mentions(f"Error: {username} not found")
+            )
 
-            elif msg_dic[id]["is_alt"]:
-                for possible_alt_owner in msg_dic:
-
-                    if id == msg_dic[possible_alt_owner]["alt"]:
-                        result = msg_dic[possible_alt_owner]["name"]
-
-                case = "case2"
-
-    if result != "" and case == "case1":
-        await ctx.send(
-            discord.utils.escape_mentions(f"{result} is an alt of {username}")
-        )
-
-    elif result != "" and case == "case2":
-        await ctx.send(
-            discord.utils.escape_mentions(f"{username} is an alt of {result}")
-        )
-
+    # checks if input is a username on the leaderboard
     else:
-        await ctx.send(discord.utils.escape_mentions(f"{username} is not an alt/has no alts"))
+        for id in msg_dic:
+            if msg_dic[id]["name"].lower() == username.lower():
+                username = id
+                success = True
 
+        try:
+            msg_dic[username]
+        except KeyError:
+            await ctx.send(
+                discord.utils.escape_mentions(f"Error: {username} not found")
+            )
+
+    if success:
+        # checks if username is an alt and gets its name
+        if msg_dic[username]["is_alt"]:
+            for id in msg_dic:
+                if msg_dic[id]["alt"] == username:
+                    result = f"{msg_dic[username]['name']} is an alt of {msg_dic[id]['name']}"
+
+        # checks if username has an alt and gets its name
+        elif msg_dic[username]["alt"] is not None:
+            alt_id = msg_dic[username]["alt"]
+            result = (
+                f"{msg_dic[alt_id]['name']} is an alt of {msg_dic[username]['name']}"
+            )
+
+        else:
+            result = f"{msg_dic[username]['name']} has no alts/is not an alt"
+
+        await ctx.send(result)
 
 @bot.event
 async def on_message(message):
