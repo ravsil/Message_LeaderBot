@@ -352,22 +352,61 @@ async def msglb(ctx):
 async def msg(ctx, username: str):
     """check how many messages a user has"""
     msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
-    msg_count = ""
+    success = False
 
-    for id in msg_dic:
-        if msg_dic[id]["name"].lower() == username.lower():
-            msg_count = str(msg_dic[id]["messages"])
+    # checks if input is a user's id on the leadeboard
+    if username.isdecimal():
+        try:
+            msg_dic[username]
+            success = True
+        except KeyError:
+            await ctx.send(
+                discord.utils.escape_mentions(f"Error: {username} not found")
+            )
 
-            if msg_dic[id]["alt"]:
-                user_alt = msg_dic[id]["alt"]
-                msg_count += f" (+{msg_dic[user_alt]['messages']})"
+    # checks if input is a user mention and if user's id is on the leaderboard
+    elif "<@!" in username:
+        username = username.replace("<@!", "").replace(">", "")
 
-    if msg_count != "":
-        await ctx.send(
-            discord.utils.escape_mentions(f"{username} has {msg_count} messages")
-        )
+        try:
+            msg_dic[username]
+            success = True
+        except KeyError:
+            await ctx.send(
+                discord.utils.escape_mentions(f"Error: {username} not found")
+            )
+
+    # checks if input is a username on the leaderboard
     else:
-        await ctx.send(discord.utils.escape_mentions(f"Error: {username} not found"))
+        for id in msg_dic:
+            if msg_dic[id]["name"].lower() == username.lower():
+                username = id
+                success = True
+
+        try:
+            msg_dic[username]
+        except KeyError:
+            await ctx.send(
+                discord.utils.escape_mentions(f"Error: {username} not found")
+            )
+
+    if success:
+        name = msg_dic[username]["name"]
+        messages = msg_dic[username]["messages"]
+
+        if msg_dic[username]["alt"] is None:
+            await ctx.send(
+                discord.utils.escape_mentions(f"{name} has {messages} messages")
+            )
+        
+        else:
+            alt_id = msg_dic[username]["alt"]
+            alt_messages = msg_dic[alt_id]["messages"]
+            await ctx.send(
+                discord.utils.escape_mentions(
+                    f"{name} has {messages} (+{alt_messages}) messages"
+                )
+            )
 
 
 @bot.command()
@@ -375,6 +414,7 @@ async def altinfo(ctx, username: str):
     """check the name of a user's alt or vice versa"""
     msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
     result = ""
+    success = False
 
     # checks if input is a user's id on the leadeboard
     if username.isdecimal():
