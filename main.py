@@ -156,6 +156,9 @@ async def alt(ctx, user: discord.User, alt: discord.User):
 
     elif bot.msg_dic[server][str(alt.id)]["is_alt"]:
         return await ctx.send(f"Error: {alt.name} ({alt.id}) is already an alt")
+    
+    elif bot.msg_dic[server][str(user.id)]["is_alt"]:
+        return await ctx.send(f"Error: {user.name} ({user.id}) is already an alt")
 
     else:
         bot.msg_dic[server][str(user.id)]["alt"] = str(alt.id)
