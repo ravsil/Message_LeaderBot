@@ -38,4 +38,6 @@ If your bot is in more than one server and you want to be safe, download/copy [f
 
 `-msg <username>`: prints the user's message number
 
+`-altinfo <username>`: check the name of a user's alt or vice versa
+
 `-help`: prints help message
