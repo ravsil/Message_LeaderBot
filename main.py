@@ -16,7 +16,7 @@ class HelpCmd(commands.HelpCommand):
             sign = self.get_command_signature(cmd)
             result.append(f"`{sign.strip()}`: {cmd.help}")
 
-        await ctx.send("\n\n".join(result))
+        await ctx.send("\n".join(result))
 
     send_cog_help = send_command_help = send_group_help = send_bot_help
 
@@ -473,6 +473,7 @@ async def altinfo(ctx, username: str):
             result = f"{msg_dic[username]['name']} has no alts/is not an alt"
 
         await ctx.send(result)
+
 
 @bot.event
 async def on_message(message):
