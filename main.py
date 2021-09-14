@@ -139,7 +139,7 @@ async def edit_err(ctx, error):
 @bot.command()
 @commands.has_guild_permissions(manage_channels=True)
 async def alt(ctx, user: discord.User, alt: discord.User):
-    """adds up the alt's messages to the user's messages (1 alt per user)"""
+    """adds up the alt's messages to the user's messages"""
     server = str(ctx.message.guild.id)
     if user == alt:
         return await ctx.send(f"{user} can't be an alt of itself")
@@ -156,12 +156,17 @@ async def alt(ctx, user: discord.User, alt: discord.User):
 
     elif bot.msg_dic[server][str(alt.id)]["is_alt"]:
         return await ctx.send(f"Error: {alt.name} ({alt.id}) is already an alt")
-    
+
     elif bot.msg_dic[server][str(user.id)]["is_alt"]:
         return await ctx.send(f"Error: {user.name} ({user.id}) is already an alt")
 
     else:
-        bot.msg_dic[server][str(user.id)]["alt"] = str(alt.id)
+        if bot.msg_dic[server][str(user.id)]["alt"] is None:
+            bot.msg_dic[server][str(user.id)]["alt"] = [str(alt.id)]
+
+        else:
+            bot.msg_dic[server][str(user.id)]["alt"].append(str(alt.id))
+
         bot.msg_dic[server][str(alt.id)]["is_alt"] = True
         update_json()
 
@@ -190,7 +195,12 @@ async def removealt(ctx, user: discord.User, alt: discord.User):
         return await ctx.send(f"Error: {alt} is not an alt")
 
     else:
-        bot.msg_dic[server][str(user.id)]["alt"] = None
+        if len(bot.msg_dic[server][str(user.id)]["alt"]) == 1:
+            bot.msg_dic[server][str(user.id)]["alt"] = None
+
+        else:
+            bot.msg_dic[server][str(user.id)]["alt"].remove(str(alt.id))
+
         bot.msg_dic[server][str(alt.id)]["is_alt"] = False
         update_json()
 
@@ -249,6 +259,7 @@ async def minimum(ctx, value: int):
     server = str(ctx.message.guild.id)
     bot.settings[server]["minimum"] = value
     update_settings()
+
     if value == 1:
         await ctx.send(
             f"Every user with more than {value} message will now be displayed on the leadeboard"
@@ -313,14 +324,18 @@ async def msglb(ctx):
 
     for id in msg_dic:
         # excludes alt users from the leadeboard
-        if not msg_dic[id]["alt"] and not msg_dic[id]["is_alt"]:
-            simple_msg_dic[id] = msg_dic[id]["messages"]
+        if not msg_dic[id]["is_alt"]:
+            if not msg_dic[id]["alt"]:
+                simple_msg_dic[id] = msg_dic[id]["messages"]
 
-        # sums the number of messages of users with alts to its respective alts
-        if msg_dic[id]["alt"] and not msg_dic[id]["is_alt"]:
-            simple_msg_dic[id] = (
-                msg_dic[id]["messages"] + msg_dic[msg_dic[id]["alt"]]["messages"]
-            )
+            # sums the number of messages of users with alts to its respective alts
+            if msg_dic[id]["alt"]:
+                messages = 0
+
+                for alt in msg_dic[id]["alt"]:
+                    messages += msg_dic[alt]["messages"]
+
+                simple_msg_dic[id] = msg_dic[id]["messages"] + messages
 
     # sorts the leaderboard by most messages in probably the ugliest way possible
     almost_sorted_msg_dic = sorted(
@@ -337,8 +352,15 @@ async def msglb(ctx):
             # prevents bots from being on the top
             if msg_dic[user]["is_bot"]:
                 bots_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
+
             elif msg_dic[user]["alt"] is not None:
-                msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
+                if len(msg_dic[user]["alt"]) == 1:
+                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
+
+                else:
+                    alts = len(msg_dic[user]["alt"])
+                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} +{alts} alts\n"
+
             else:
                 msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
 
@@ -401,10 +423,13 @@ async def msg(ctx, username: str):
             await ctx.send(
                 discord.utils.escape_mentions(f"{name} has {messages} messages")
             )
-        
+
         else:
-            alt_id = msg_dic[username]["alt"]
-            alt_messages = msg_dic[alt_id]["messages"]
+            alt_messages = 0
+
+            for alt in msg_dic[username]["alt"]:
+                alt_messages += msg_dic[alt]["messages"]
+
             await ctx.send(
                 discord.utils.escape_mentions(
                     f"{name} has {messages} (+{alt_messages}) messages"
@@ -459,15 +484,18 @@ async def altinfo(ctx, username: str):
         # checks if username is an alt and gets its name
         if msg_dic[username]["is_alt"]:
             for id in msg_dic:
-                if msg_dic[id]["alt"] == username:
+                if msg_dic[id]["alt"] is not None and username in msg_dic[id]["alt"]:
                     result = f"{msg_dic[username]['name']} is an alt of {msg_dic[id]['name']}"
 
         # checks if username has an alt and gets its name
         elif msg_dic[username]["alt"] is not None:
-            alt_id = msg_dic[username]["alt"]
-            result = (
-                f"{msg_dic[alt_id]['name']} is an alt of {msg_dic[username]['name']}"
-            )
+            if len(msg_dic[username]["alt"]) == 1:
+                result = f"{msg_dic[msg_dic[username]['alt'][0]]['name']} is an alt of {msg_dic[username]['name']}"
+
+            else:
+                alt_list = msg_dic[username]["alt"]
+                result = ", ".join(msg_dic[alt]["name"] for alt in alt_list[0:-1])
+                result += f" and {msg_dic[alt_list[-1]]['name']} are alts of {msg_dic[username]['name']}"
 
         else:
             result = f"{msg_dic[username]['name']} has no alts/is not an alt"
