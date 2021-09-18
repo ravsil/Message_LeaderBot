@@ -390,8 +390,11 @@ async def msg(ctx, username: str):
             )
 
     # checks if input is a user mention and if user's id is on the leaderboard
-    elif "<@!" in username:
-        username = username.replace("<@!", "").replace(">", "")
+    elif "<@" in username:
+        if "!" in username:
+            username = username.replace("!", "")
+            
+        username = username.replace("<@", "").replace(">", "")
 
         try:
             msg_dic[username]
@@ -455,8 +458,11 @@ async def altinfo(ctx, username: str):
             )
 
     # checks if input is a user mention and if user's id is on the leaderboard
-    elif "<@!" in username:
-        username = username.replace("<@!", "").replace(">", "")
+    elif "<@" in username:
+        if "!" in username:
+            username = username.replace("!", "")
+
+        username = username.replace("<@", "").replace(">", "")
 
         try:
             msg_dic[username]
