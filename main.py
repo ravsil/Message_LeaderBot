@@ -129,7 +129,7 @@ async def edit(ctx, user: discord.User, message_number: int):
 
 @edit.error
 async def edit_err(ctx, error):
-    # error handler for minimum command
+    # error handler for edit command
     if isinstance(error, commands.BadArgument):
         return await ctx.send("Error: you must input a valid number of messages")
 
@@ -410,6 +410,7 @@ async def msg(ctx, username: str):
             if msg_dic[id]["name"].lower() == username.lower():
                 username = id
                 success = True
+                break
 
         try:
             msg_dic[username]
@@ -478,6 +479,7 @@ async def altinfo(ctx, username: str):
             if msg_dic[id]["name"].lower() == username.lower():
                 username = id
                 success = True
+                break
 
         try:
             msg_dic[username]
@@ -492,6 +494,7 @@ async def altinfo(ctx, username: str):
             for id in msg_dic:
                 if msg_dic[id]["alt"] is not None and username in msg_dic[id]["alt"]:
                     result = f"{msg_dic[username]['name']} is an alt of {msg_dic[id]['name']}"
+                    break
 
         # checks if username has an alt and gets its name
         elif msg_dic[username]["alt"] is not None:
