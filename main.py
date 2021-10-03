@@ -317,9 +317,11 @@ async def msglb(ctx):
     """prints the message leaderboard"""
     update_json()
     server = str(ctx.message.guild.id)
+    author = str(ctx.author.id)
     simple_msg_dic = {}
     msg_lb = ""
     bots_lb = ""
+    top_users = []
     msg_dic = bot.msg_dic[server]
 
     for id in msg_dic:
@@ -349,11 +351,16 @@ async def msglb(ctx):
     # restricts the leaderboard to only users with more than a certain minimum
     for user in sorted_msg_dic:
         if int(sorted_msg_dic[user]) >= bot.settings[server]["minimum"]:
+            top_users.append(user)
+
             # prevents bots from being on the top
             if msg_dic[user]["is_bot"]:
                 bots_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
 
             elif msg_dic[user]["alt"] is not None:
+                if author == user:
+                    msg_lb += "**"
+
                 if len(msg_dic[user]["alt"]) == 1:
                     msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
 
@@ -361,11 +368,22 @@ async def msglb(ctx):
                     alts = len(msg_dic[user]["alt"])
                     msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} +{alts} alts\n"
 
+                if author == user:
+                    msg_lb += "**"
+
             else:
+                if author == user:
+                    msg_lb += "**"
+
                 msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
 
-    # adds bots to the end
+                if author == user:
+                    msg_lb += "**"
+
+    # adds bots and message author (if not already on the leaderboard) to the end
     msg_lb += "\n" + bots_lb
+    if author in msg_dic and author not in top_users:
+        msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']}**"
 
     embed = discord.Embed(
         title="Message Leaderboard", color=7419530, description=msg_lb
