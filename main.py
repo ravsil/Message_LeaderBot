@@ -380,10 +380,22 @@ async def msglb(ctx):
                 if author == user:
                     msg_lb += "**"
 
-    # adds bots and message author (if not already on the leaderboard) to the end
+    # adds bots to the end
     msg_lb += "\n" + bots_lb
+
+    # adds message author to the end if not already on the leaderboard
     if author in msg_dic and author not in top_users:
-        msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']}**"
+        if len(msg_dic[author]["alt"]) == 1:
+            msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} + alt**"
+
+        elif len(msg_dic[author]["alt"]) > 1:
+            alts = len(msg_dic[author]["alt"])
+            msg_lb += (
+                f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} +{alts} alts**"
+            )
+
+        else:
+            msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']}**"
 
     embed = discord.Embed(
         title="Message Leaderboard", color=7419530, description=msg_lb
