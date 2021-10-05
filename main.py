@@ -385,14 +385,15 @@ async def msglb(ctx):
 
     # adds message author to the end if not already on the leaderboard
     if author in msg_dic and author not in top_users:
-        if len(msg_dic[author]["alt"]) == 1:
-            msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} + alt**"
+        if msg_dic[author]["alt"]:
+            if len(msg_dic[author]["alt"]) == 1:
+                msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} + alt**"
 
-        elif len(msg_dic[author]["alt"]) > 1:
-            alts = len(msg_dic[author]["alt"])
-            msg_lb += (
-                f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} +{alts} alts**"
-            )
+            else:
+                alts = len(msg_dic[author]["alt"])
+                msg_lb += (
+                    f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} +{alts} alts**"
+                )
 
         else:
             msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']}**"
