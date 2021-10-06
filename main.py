@@ -54,7 +54,7 @@ bot = MsgLeaderBot()
 try:
     with open("settings.json", "r") as a:
         bot.settings = json.loads(a.read())
-    bot.settings[token]
+    bot.settings["token"]
 except (FileNotFoundError, KeyError, json.decoder.JSONDecodeError):
     token = input("input bot token: ")
     bot.settings = {"token": token}
@@ -546,48 +546,44 @@ async def altinfo(ctx, username: str):
 
 @bot.event
 async def on_message(message):
-    server = str(message.guild.id)
-    try:
-        bot.msg_dic[server]
-    except KeyError:
-        bot.msg_dic[server] = {}
-
-    try:
-        bot.settings[server]["minimum"]
-        bot.settings[server]["listen_to_all"]
-    except KeyError:
-        bot.settings[server] = {}
-        bot.settings[server]["minimum"] = 20000
-        bot.settings[server]["listen_to_all"] = True
-        update_settings()
-
-    if message.author == bot.user:
+    user = message.author
+    if user == bot.user:
         return
 
+    try:
+        msg_dic = bot.msg_dic[str(message.guild.id)]
+    except KeyError:
+        msg_dic = bot.msg_dic[str(message.guild.id)] = {}
+
+    try:
+        bot.settings[str(message.guild.id)]["minimum"]
+        bot.settings[str(message.guild.id)]["listen_to_all"]
+    except KeyError:
+        bot.settings[str(message.guild.id)] = {"minimum": 20000, "listen_to_all": True}
+        settings = bot.settings[str(message.guild.id)]
+        update_settings()
+
     # adds a point to the author everytime a message is sent
-    if (
-        str(message.author.id) not in bot.msg_dic[server]
-        and bot.settings[server]["listen_to_all"]
-    ):
-        if message.author.bot:
-            bot.msg_dic[server][str(message.author.id)] = {
+    if str(user.id) not in msg_dic and settings["listen_to_all"]:
+        if user.bot:
+            msg_dic[str(user.id)] = {
                 "messages": 1,
-                "name": message.author.name,
+                "name": user.name,
                 "alt": None,
                 "is_alt": False,
                 "is_bot": True,
             }
         else:
-            bot.msg_dic[server][str(message.author.id)] = {
+            msg_dic[str(user.id)] = {
                 "messages": 1,
-                "name": message.author.name,
+                "name": user.name,
                 "alt": None,
                 "is_alt": False,
                 "is_bot": False,
             }
 
-    elif str(message.author.id) in bot.msg_dic[server]:
-        bot.msg_dic[server][str(message.author.id)]["messages"] += 1
+    elif str(user.id) in msg_dic:
+        msg_dic[str(user.id)]["messages"] += 1
 
     # process a command (if valid)
     await bot.process_commands(message)
