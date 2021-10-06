@@ -54,7 +54,8 @@ bot = MsgLeaderBot()
 try:
     with open("settings.json", "r") as a:
         bot.settings = json.loads(a.read())
-except FileNotFoundError:
+    bot.settings[token]
+except (FileNotFoundError, KeyError, json.decoder.JSONDecodeError):
     token = input("input bot token: ")
     bot.settings = {"token": token}
     with open("settings.json", "w+") as a:
@@ -66,7 +67,7 @@ settings = "settings.json"
 try:
     with open("messages.json", "r") as b:
         bot.msg_dic = json.loads(b.read())
-except FileNotFoundError:
+except (FileNotFoundError, json.decoder.JSONDecodeError):
     bot.msg_dic = {}
 
 
