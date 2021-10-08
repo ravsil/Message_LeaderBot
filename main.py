@@ -1,8 +1,10 @@
-import discord
-from discord.ext import commands, tasks
 import json
 import os
 import uuid
+
+import discord
+from discord.ext import commands, tasks
+
 
 
 class HelpCmd(commands.HelpCommand):
