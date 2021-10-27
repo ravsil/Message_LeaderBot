@@ -31,8 +31,9 @@ class MsgLeaderBot(commands.Bot):
             help_command=HelpCmd(command_attrs=helpattr),
             allowed_mentions=discord.AllowedMentions.none(),
         )
-        # start json updater
+        # start json updater and file saver
         self.json_updater.start()
+        self.save.start()
 
     async def on_ready(self):
         # launch everytime bot is online (not only first boot)
@@ -45,10 +46,19 @@ class MsgLeaderBot(commands.Bot):
         print("Updated!")
         update_json()
 
+    @tasks.loop(hours=24)
+    async def save(self):
+        # create/update json for every server every 24 hours
+        file_saver.saver()
+
     @json_updater.before_loop
     async def before_update(self):
-        # wait until bot is ready before updating json
         await bot.wait_until_ready()
+
+    @save.before_loop
+    async def before_save(self):
+        await bot.wait_until_ready()
+
 
 
 bot = MsgLeaderBot()
