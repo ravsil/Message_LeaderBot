@@ -629,7 +629,10 @@ async def on_command_error(
         error = str(error)
         return await ctx.send(f"Error: {error[0].lower()}{error[1:-1]}")
 
-    raise error
+    try:
+        raise error
+    except discord.errors.Forbidden:
+        await ctx.author.send(f"```\n{error}\n```")
 
 
 bot.run(bot.settings["token"])
