@@ -562,8 +562,8 @@ async def on_message(message):
         bot.settings[str(message.guild.id)]["listen_to_all"]
     except KeyError:
         bot.settings[str(message.guild.id)] = {"minimum": 20000, "listen_to_all": True}
-        settings = bot.settings[str(message.guild.id)]
         update_settings()
+    settings = bot.settings[str(message.guild.id)]
 
     # adds a point to the author everytime a message is sent
     if str(user.id) not in msg_dic and settings["listen_to_all"]:
