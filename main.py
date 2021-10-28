@@ -5,7 +5,7 @@ import uuid
 import discord
 from discord.ext import commands, tasks
 
-
+import file_saver
 
 class HelpCmd(commands.HelpCommand):
     async def send_bot_help(self, mapping):
