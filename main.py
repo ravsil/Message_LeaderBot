@@ -337,7 +337,7 @@ async def msglb(ctx):
     top_users = []
     msg_dic = bot.msg_dic[server]
 
-    if msg_dic[author]["is_alt"]:
+    if author in msg_dic and msg_dic[author]["is_alt"]:
         for id in msg_dic:
             if msg_dic[id]["alt"] is not None and author in msg_dic[id]["alt"]:
                 author = id
