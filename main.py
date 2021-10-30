@@ -424,10 +424,13 @@ async def msglb(ctx):
 
 
 @bot.command()
-async def msg(ctx, username: str):
+async def msg(ctx, username: str = ""):
     """check how many messages a user has"""
     msg_dic = bot.msg_dic[str(ctx.message.guild.id)]
     success = False
+    
+    if not username:
+        username = str(ctx.author.id)
 
     # checks if input is a user's id on the leadeboard
     if username.isdecimal():
