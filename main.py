@@ -301,6 +301,13 @@ async def source(ctx):
 
 
 @bot.command()
+async def ping(ctx):
+    """Tells the ping of the bot to the discord servers"""
+    update_json() # because why not
+    await ctx.send(f"Pong! {round(bot.latency*1000)}ms")
+
+
+@bot.command()
 async def minfo(ctx):
     """prints the current minimum value to appear on the leaderboard"""
     await ctx.send(
