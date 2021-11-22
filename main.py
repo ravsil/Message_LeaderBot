@@ -225,13 +225,14 @@ async def removealt(ctx, user: discord.User, alt: discord.User):
 async def addbot(ctx, user: discord.User):
     """saves a user as a bot (displayed on the bottom of the leaderboard)"""
     server = str(ctx.message.guild.id)
-    if bot.msg_dic[server][str(user.id)]["is_bot"]:
-        await ctx.send(f"{user} is already a bot")
 
     try:
-        bot.msg_dic[server][str(user.id)]["is_bot"] = True
-        update_json()
-        await ctx.send(f"{user} is now a bot")
+        if bot.msg_dic[server][str(user.id)]["is_bot"]:
+            await ctx.send(f"{user} is already a bot")
+        else:
+            bot.msg_dic[server][str(user.id)]["is_bot"] = True
+            update_json()
+            await ctx.send(f"{user} is now a bot")
     except KeyError:
         await ctx.send(f"Error: {user} is not listed in the leaderboard")
 
@@ -241,13 +242,14 @@ async def addbot(ctx, user: discord.User):
 async def rmvbot(ctx, user: discord.User):
     """removes bot tag from a user"""
     server = str(ctx.message.guild.id)
-    if not bot.msg_dic[server][str(user.id)]["is_bot"]:
-        await ctx.send(f"{user} is already not a bot")
 
     try:
-        bot.msg_dic[server][str(user.id)]["is_bot"] = False
-        update_json()
-        await ctx.send(f"{user} is no longer a bot")
+        if not bot.msg_dic[server][str(user.id)]["is_bot"]:
+            await ctx.send(f"{user} is already not a bot")
+        else:
+            bot.msg_dic[server][str(user.id)]["is_bot"] = False
+            update_json()
+            await ctx.send(f"{user} is no longer a bot")
     except KeyError:
         await ctx.send(f"Error: {user} is not listed in the leaderboard")
 
