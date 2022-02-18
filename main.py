@@ -587,4 +587,5 @@ async def on_command_error(
         await ctx.author.send(f"```\n{error}\n```")
 
 
-bot.run(bot.settings["token"])
+if __name__ == "__main__":
+    bot.run(bot.settings["token"])
