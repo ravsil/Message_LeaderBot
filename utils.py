@@ -69,22 +69,18 @@ def alt_handler(bot, ctx, user, alt, add=True):
         if add:
             if msg_dic[str(user.id)]["alt"] is None:
                 msg_dic[str(user.id)]["alt"] = [str(alt.id)]
-
             else:
                 msg_dic[str(user.id)]["alt"].append(str(alt.id))
 
             msg_dic[str(alt.id)]["is_alt"] = True
             update_settings(bot.msg_dic)
-
             return f"{alt} was saved as an alt of {user}"
         else:
             if len(msg_dic[str(user.id)]["alt"]) == 1:
                 msg_dic[str(user.id)]["alt"] = None
-
             else:
                 msg_dic[str(user.id)]["alt"].remove(str(alt.id))
 
             msg_dic[str(alt.id)]["is_alt"] = False
             update_settings(bot.msg_dic)
-
             return f"{alt} is no longer an alt of {user}"
