@@ -261,10 +261,10 @@ async def name(ctx):
 @bot.command()
 async def msglb(ctx):
     """prints the message leaderboard"""
-    update_json(bot, msg_dic)
+    update_json(bot.msg_dic)
     server = str(ctx.message.guild.id)
     author = str(ctx.author.id)
-    simple_msg_dic = {}
+    smgs_dic = {}
     msg_lb = ""
     bots_lb = ""
     top_users = []
@@ -280,7 +280,7 @@ async def msglb(ctx):
         # excludes alt users from the leadeboard
         if not msg_dic[id]["is_alt"]:
             if not msg_dic[id]["alt"]:
-                simple_msg_dic[id] = msg_dic[id]["messages"]
+                smgs_dic[id] = msg_dic[id]["messages"]
 
             # sums the number of messages of users with alts to its respective alts
             if msg_dic[id]["alt"]:
@@ -289,36 +289,32 @@ async def msglb(ctx):
                 for alt in msg_dic[id]["alt"]:
                     messages += msg_dic[alt]["messages"]
 
-                simple_msg_dic[id] = msg_dic[id]["messages"] + messages
+                smgs_dic[id] = msg_dic[id]["messages"] + messages
 
-    # sorts the leaderboard by most messages in probably the ugliest way possible
-    almost_sorted_msg_dic = sorted(
-        simple_msg_dic.items(), key=lambda x: x[1], reverse=True
-    )
-    sorted_msg_dic = {}
-
-    for item in almost_sorted_msg_dic:
-        sorted_msg_dic[str(item[0])] = int(item[1])
+    # sorts the leaderboard
+    smgs_dic = dict(sorted(smgs_dic.items(), key=lambda item: item[1], reverse=True))
 
     # restricts the leaderboard to only users with more than a certain minimum
-    for user in sorted_msg_dic:
-        if int(sorted_msg_dic[user]) >= bot.settings[server]["minimum"]:
+    for user in smgs_dic:
+        if int(smgs_dic[user]) >= bot.settings[server]["minimum"]:
             top_users.append(user)
 
             # prevents bots from being on the top
             if msg_dic[user]["is_bot"]:
-                bots_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
+                bots_lb += f"{smgs_dic[user]}: {msg_dic[user]['name']}\n"
 
             elif msg_dic[user]["alt"] is not None:
                 if author == user:
                     msg_lb += "**"
 
                 if len(msg_dic[user]["alt"]) == 1:
-                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} + alt\n"
+                    msg_lb += f"{smgs_dic[user]}: {msg_dic[user]['name']} + alt\n"
 
                 else:
                     alts = len(msg_dic[user]["alt"])
-                    msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']} +{alts} alts\n"
+                    msg_lb += (
+                        f"{smgs_dic[user]}: {msg_dic[user]['name']} +{alts} alts\n"
+                    )
 
                 if author == user:
                     msg_lb += "**"
@@ -327,7 +323,7 @@ async def msglb(ctx):
                 if author == user:
                     msg_lb += "**"
 
-                msg_lb += f"{simple_msg_dic[user]}: {msg_dic[user]['name']}\n"
+                msg_lb += f"{smgs_dic[user]}: {msg_dic[user]['name']}\n"
 
                 if author == user:
                     msg_lb += "**"
@@ -339,16 +335,16 @@ async def msglb(ctx):
     if author in msg_dic and author not in top_users:
         if msg_dic[author]["alt"]:
             if len(msg_dic[author]["alt"]) == 1:
-                msg_lb += (
-                    f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} + alt**"
-                )
+                msg_lb += f"**{smgs_dic[author]}: {msg_dic[author]['name']} + alt**"
 
             else:
                 alts = len(msg_dic[author]["alt"])
-                msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']} +{alts} alts**"
+                msg_lb += (
+                    f"**{smgs_dic[author]}: {msg_dic[author]['name']} +{alts} alts**"
+                )
 
         else:
-            msg_lb += f"**{simple_msg_dic[author]}: {msg_dic[author]['name']}**"
+            msg_lb += f"**{smgs_dic[author]}: {msg_dic[author]['name']}**"
 
     embed = discord.Embed(
         title="Message Leaderboard", color=7419530, description=msg_lb
