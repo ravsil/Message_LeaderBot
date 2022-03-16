@@ -219,7 +219,7 @@ async def minimum_err(ctx, error):
 @bot.command()
 async def source(ctx):
     """prints the source code link"""
-    await ctx.send("https://github.com/RafaeI11/Message_LeaderBot")
+    await ctx.send("https://github.com/RafaeISilva/Message_LeaderBot")
 
 
 @bot.command()
